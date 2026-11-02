@@ -1,0 +1,123 @@
+# REX OS - Git Ignore
+# Protects personal data, credentials, build artifacts, and secrets
+
+# === Operating System Files ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+
+# === Build Artifacts ===
+# ISO outputs
+*.iso
+*.iso.sha*
+*.iso.sha256
+*.iso.sha512
+*.iso.blake2
+isos/
+live-image-amd64.hybrid.iso
+build/output/
+chroot/
+
+# Debian Live Build working directories (generated during build)
+.config/
+build.log
+live-build/
+live-boot/
+live-config/
+
+# === Python ===
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.pyc
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+env/
+venv/
+ENV/
+.venv/
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+.ructus_cache/
+*.egg-info/
+dist/
+downloads/
+
+# === Test files in includes (removed during build) ===
+build/config/includes.chroot/**/test_*.py
+build/config/includes.chroot/**/*_test.py
+
+# === Node.js (if needed for ARES) ===
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-store/
+.pnpm-store/
+
+# === IDE & Editor ===
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+*.sublime-workspace
+*.sublime-project
+
+# === Credentials & Secrets ===
+.env
+.env.local
+.env.*.local
+*.pem
+*.key
+*.secret
+*.p12
+*.crt
+secrets.json
+credentials.json
+*.secrets
+.env.example
+
+# === API Keys & Tokens (explicit file protection) ===
+*api_key*.txt
+*token*.txt
+*secret*
+api-keys/
+
+# === Logs ===
+*.log
+logs/
+
+# === Temporary Files ===
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+
+# === Claude & AI Artifacts ===
+.claude/
+.claude-mem/
+.ollama/
+ai_models/
+models/
+
+# === Windows System Folders ===
+/ntuser.dat
+Recycle Bin/
+System Volume Information/
+Temporary Internet Files/
+Cookies/
+Favorites/

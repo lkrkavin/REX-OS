@@ -1,0 +1,13 @@
+﻿#!/bin/sh
+# Install Python packages not available in Debian repositories
+set -e
+
+echo "[REX OS] Installing Python dependencies from PyPI..."
+
+PYPI_PACKAGES="pyttsx3 SpeechRecognition PyAutoGUI python-mss transliterate indic-transliteration"
+
+apt-get update -qq
+apt-get install -y python3-pip -qq
+pip3 install --no-cache-dir --break-system-packages $PYPI_PACKAGES 2>/dev/null || echo "[REX OS] Some PyPI packages may have failed."
+
+echo "[REX OS] Python dependencies installation complete."

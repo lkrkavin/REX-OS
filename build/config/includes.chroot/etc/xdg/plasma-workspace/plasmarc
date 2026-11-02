@@ -1,0 +1,6 @@
+[Wallpaper]
+Image=/usr/share/wallpapers/rex/contents/images/REX-OS-wallpaper.png
+FillMode=2
+
+[Theme]
+FallbackStyle=Breeze

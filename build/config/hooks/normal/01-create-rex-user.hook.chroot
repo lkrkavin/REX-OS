@@ -1,0 +1,68 @@
+#!/bin/sh
+# Create the 'rex' system user and group for REX OS
+# Follows Debian system-account conventions.
+# SECURITY: No password is set. No interactive login is enabled.
+set -e
+
+echo "[REX OS] Creating system user 'rex'..."
+
+# Validate that 'rex' group, if it exists, has expected configuration
+if getent group rex > /dev/null 2>&1; then
+    CURRENT_GID=$(getent group rex | cut -d: -f3)
+    echo "[REX OS] Group 'rex' already exists with GID $CURRENT_GID"
+else
+    # Create system group with auto-allocated GID
+    # groupadd --system reserves a UID in the system range (typically < 1000)
+    groupadd --system rex
+    CURRENT_GID=$(getent group rex | cut -d: -f3)
+    echo "[REX OS] Created system group 'rex' with GID $CURRENT_GID"
+fi
+
+# Validate that 'rex' user, if it exists, has expected configuration
+if getent passwd rex > /dev/null 2>&1; then
+    CURRENT_UID=$(getent passwd rex | cut -d: -f3)
+    CURRENT_SHELL=$(getent passwd rex | cut -d: -f7)
+    CURRENT_GECOS=$(getent passwd rex | cut -d: -f5)
+
+    # Ensure the existing user has the expected group
+    EXPECTED_GID=$(getent group rex | cut -d: -f3)
+    USER_GID=$(getent passwd rex | cut -d: -f4)
+
+    if [ "$USER_GID" != "$EXPECTED_GID" ]; then
+        echo "[REX OS] ERROR: User 'rex' has wrong primary group. Current: $USER_GID, Expected: $EXPECTED_GID"
+        echo "[REX OS] Please manually fix this account before building."
+        exit 1
+    fi
+
+    # Check shell - warn but don't fail (might be legitimate for live session)
+    if [ "$CURRENT_SHELL" != "/usr/sbin/nologin" ] && [ "$CURRENT_SHELL" != "/bin/false" ]; then
+        echo "[REX OS] WARNING: User 'rex' has shell: $CURRENT_SHELL"
+    fi
+
+    echo "[REX OS] User 'rex' already exists with UID $CURRENT_UID"
+else
+    # Create system user with auto-allocated UID
+    # --system: Use system account conventions (low UID, no password, no aging)
+    # --gid rex: Use the existing rex group as primary group
+    # --home-dir /var/lib/rex: Set home to our data directory
+    # --no-create-home: Don't create home (we create it explicitly)
+    # --shell /usr/sbin/nologin: No interactive shell
+    # --gecos "REX OS": System user description
+    useradd --system \
+            --gid rex \
+            --home-dir /var/lib/rex \
+            --no-create-home \
+            --shell /usr/sbin/nologin \
+            --gecos "REX OS System User" \
+            rex
+
+    NEW_UID=$(getent passwd rex | cut -d: -f3)
+    echo "[REX OS] Created system user 'rex' with UID $NEW_UID"
+fi
+
+# Create data directory with secure permissions
+mkdir -p /var/lib/rex
+chown rex:rex /var/lib/rex
+chmod 750 /var/lib/rex
+
+echo "[REX OS] User 'rex' configured. Directory /var/lib/rex ready."

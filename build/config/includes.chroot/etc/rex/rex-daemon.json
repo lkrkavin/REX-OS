@@ -1,0 +1,9 @@
+{
+  "log_level": "info",
+  "ai_enabled": true,
+  "memory_enabled": true,
+  "device_check_interval": 30,
+  "max_cpu_percent": 90,
+  "max_memory_percent": 85,
+  "notification_timeout": 5
+}

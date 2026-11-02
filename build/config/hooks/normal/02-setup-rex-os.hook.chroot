@@ -1,0 +1,25 @@
+#!/bin/sh
+# Setup REX OS files in /opt/rex-os
+# Note: Files are already in place from lb copy-tree (includes.chroot)
+set -e
+
+echo "[REX OS] Verifying REX OS base directory..."
+
+# Create REX OS directory structure (may already exist from copy-tree)
+mkdir -p /opt/rex-os/ais
+mkdir -p /opt/rex-os/services
+mkdir -p /opt/rex-os/ui
+mkdir -p /opt/rex-os/omni
+mkdir -p /opt/rex-os/connect
+
+# Set ownership
+chown -R root:root /opt/rex-os
+find /opt/rex-os -type f -exec chmod 644 {} \;
+find /opt/rex-os -type f -name "*.py" -exec chmod 755 {} \;
+
+# Remove test files from production image for security and size
+echo "[REX OS] Removing test files from production image..."
+find /opt/rex-os -type f -name "test_*.py" -delete 2>/dev/null || true
+find /opt/rex-os -type f -name "*_test.py" -delete 2>/dev/null || true
+
+echo "[REX OS] REX OS base directory configured."

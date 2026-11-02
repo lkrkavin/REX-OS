@@ -1,0 +1,19 @@
+{
+    "KPlugin": {
+        "Author": "REX OS Team",
+        "Category": "Plasma Theme",
+        "Description": "REX OS Dark Graphite Theme with Cyan and Purple accents",
+        "Id": "rex",
+        "License": "GPL-3.0",
+        "Name": "REX OS",
+        "Version": "0.1.0",
+        "Website": "https://rex-os.org"
+    },
+    "X-KDE-ParentApp": "org.kde.plasmashell",
+    "X-KDE-PluginInfo-Depends": "",
+    "X-KDE-PluginInfo-EnabledByDefault": true,
+    "X-KDE-PluginInfo-License": "GPL",
+    "X-KDE-PluginInfo-Name": "rex",
+    "X-KDE-PluginInfo-Version": "0.1.0",
+    "X-KDE-PluginInfo-Website": "https://rex-os.org"
+}

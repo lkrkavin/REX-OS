@@ -1,0 +1,86 @@
+name: Build REX OS ISO
+
+on:
+  push:
+    branches: [ "main", "master" ]
+    tags:
+      - 'v*'
+  pull_request:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+jobs:
+  build-iso:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Free disk space on runner
+        run: |
+          echo "Freeing disk space..."
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/lib/android
+          sudo rm -rf /opt/ails
+          df -h
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y \
+            live-build \
+            live-boot \
+            live-config \
+            git \
+            squashfs-tools \
+            xorriso \
+            rsync \
+            wget \
+            curl \
+            ca-certificates \
+            grub-efi-ia32 \
+            grub-efi-amd64 \
+            mtools \
+            python3 \
+            python3-pip \
+            python3-aiohttp \
+            python3-yaml \
+            python3-bs4
+
+      - name: Prepare build environment
+        run: |
+          mkdir -p build/output
+          chmod +x build/build-rex-os.sh
+
+      - name: Run REX OS Build
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          cd build
+          sudo ./build-rex-os.sh
+
+      - name: Generate Checksums and Manifest
+        run: |
+          cd build/output
+          if [ -f REX-OS-0.1.0-amd64.iso ]; then
+            sha256sum REX-OS-0.1.0-amd64.iso > REX-OS-0.1.0-amd64.iso.sha256
+            sha512sum REX-OS-0.1.0-amd64.iso > REX-OS-0.1.0-amd64.iso.sha512
+            file REX-OS-0.1.0-amd64.iso
+            ls -lh REX-OS-0.1.0-amd64.iso
+          else
+            echo "Error: ISO file not found in output directory!"
+            exit 1
+          fi
+
+      - name: Upload REX OS ISO Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: REX-OS-0.1.0-amd64
+          path: |
+            build/output/REX-OS-0.1.0-amd64.iso
+            build/output/REX-OS-0.1.0-amd64.iso.sha256
+            build/output/REX-OS-0.1.0-amd64.iso.sha512
+            build/output/MANIFEST.txt
+          retention-days: 7
