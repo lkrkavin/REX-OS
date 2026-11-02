@@ -46,7 +46,8 @@ jobs:
             python3-pip \
             python3-aiohttp \
             python3-yaml \
-            python3-bs4
+            python3-bs4 \
+            debian-archive-keyring
 
       - name: Prepare build environment
         run: |
