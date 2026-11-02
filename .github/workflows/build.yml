@@ -58,6 +58,7 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
+          sudo ln -s "$GITHUB_WORKSPACE/build" /build
           cd build
           sudo ./build-rex-os.sh
 
