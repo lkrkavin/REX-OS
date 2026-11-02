@@ -58,8 +58,19 @@ jobs:
         env:
           DEBIAN_FRONTEND: noninteractive
         run: |
-          sudo ln -s "$GITHUB_WORKSPACE/build" /build
-          cd build
+          if [ -L /build ]; then
+              if [ "$(readlink -f /build)" != "$(readlink -f "$GITHUB_WORKSPACE/build")" ]; then
+                  echo "ERROR: /build points to an unexpected location"
+                  exit 1
+              fi
+          elif [ -e /build ]; then
+              echo "ERROR: /build already exists and is not a symlink"
+              exit 1
+          else
+              sudo ln -s "$GITHUB_WORKSPACE/build" /build
+          fi
+
+          cd "$GITHUB_WORKSPACE/build"
           sudo ./build-rex-os.sh
 
       - name: Generate Checksums and Manifest
