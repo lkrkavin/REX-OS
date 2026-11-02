@@ -57,6 +57,8 @@ lb clean 2>/dev/null || true
 
 # Configure live-build
 lb config \
+    --ignore-system-defaults \
+    --mode debian \
     --distribution bookworm \
     --architecture amd64 \
     --binary-images iso-hybrid \
@@ -66,7 +68,9 @@ lb config \
     --linux-flavours amd64 \
     --memtest none \
     --security True \
-    --source False
+    --source False \
+    --mirror-bootstrap "https://deb.debian.org/debian/" \
+    --mirror-chroot "https://deb.debian.org/debian/"
 
 info "Build configuration complete."
 
@@ -78,12 +82,15 @@ fi
 
 info "Starting ISO build (this may take 30-60 minutes)..."
 
-# Build the ISO
+# Build the ISO with proper error handling
+# Use pipefail to ensure the if statement sees the lb build exit status
+set -o pipefail
 if lb build 2>&1 | tee /build/build.log; then
     info "Build completed successfully!"
 else
     error "Build failed. Check /build/build.log for details."
 fi
+set +o pipefail
 
 # Move ISO to output directory
 if [[ -f live-image-amd64.hybrid.iso ]]; then
