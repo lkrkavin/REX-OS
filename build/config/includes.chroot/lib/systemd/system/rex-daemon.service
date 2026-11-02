@@ -9,6 +9,7 @@ Type=simple
 ExecStart=/usr/bin/python3 /opt/rex-os/services/rex_daemon.py
 WorkingDirectory=/var/lib/rex
 Environment=PYTHONUNBUFFERED=1
+Environment=PYTHONPATH=/opt/rex-os
 User=rex
 Group=rex
 

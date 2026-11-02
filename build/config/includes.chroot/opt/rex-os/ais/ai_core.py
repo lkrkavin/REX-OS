@@ -7,7 +7,7 @@ This module provides a modular AI provider architecture supporting
 local (Ollama) and cloud providers with graceful offline fallback.
 
 Features:
-- Provider adapter architecture (Ollama, OpenAI, Anthropic, Google)
+- Provider adapter architecture
 - Local-first operation with offline fallback
 - Model capability detection
 - Conversation context management
@@ -26,7 +26,7 @@ from datetime import datetime
 
 # Import provider adapters
 try:
-    from ai_providers import (
+    from .ai_providers import (
         ProviderType, ModelInfo, AIProvider,
         OllamaProvider, OpenAIProvider, AnthropicProvider, GoogleProvider,
         create_provider
@@ -36,7 +36,7 @@ except ImportError:
     PROVIDERS_AVAILABLE = False
 
 try:
-    from user_memory import UserMemory
+    from .user_memory import UserMemory
     MEMORY_AVAILABLE = True
 except ImportError:
     MEMORY_AVAILABLE = False
@@ -55,20 +55,75 @@ class Conversation:
         self.updated_at = datetime.now().isoformat()
 
     def to_prompt(self) -> str:
-        """Convert messages to a single prompt for providers"""
+        """Convert messages to a single prompt for providers that don't support chat"""
         return "\n".join(
-            f"{m['role']}: {m['content']}" for m in self.messages[-10:]
+            f"{m['role']}: {m['content']}" for m in self.messages[-10:]  # Last 10 messages
         )
 
 
 @dataclass
 class ProviderStatus:
     """Status of an AI provider"""
-    provider_type: str
-    available: bool = False
+    provider_type: ProviderType
+    available: bool
     models: List[str] = field(default_factory=list)
     last_error: Optional[str] = None
     response_time_ms: Optional[float] = None
+
+
+class AIProviderConfig:
+    """Configuration for AI providers"""
+
+    def __init__(self, config_path: str = "/etc/rex/ai_providers.json"):
+        self.config_path = config_path
+        self._config = self._load_config()
+
+    def _load_config(self) -> Dict[str, Any]:
+        """Load provider configuration"""
+        defaults = {
+            "preferred_provider": None,  # Auto-select if None
+            "providers": {
+                "ollama": {"base_url": "http://localhost:11434", "timeout": 30},
+                "openai": {"timeout": 30},
+                "anthropic": {"timeout": 30},
+                "google": {"timeout": 30}
+            },
+            "offline_fallback": True,
+            "max_context_length": 4096,
+            "default_model": None
+        }
+
+        if os.path.exists(self.config_path):
+            try:
+                with open(self.config_path, 'r') as f:
+                    loaded = json.load(f)
+                    # Merge with defaults
+                    for key, value in loaded.items():
+                        if key in defaults:
+                            defaults[key] = value
+            except Exception:
+                pass
+
+        return defaults
+
+    @property
+    def preferred_provider(self) -> Optional[ProviderType]:
+        """Get the preferred provider type"""
+        pref = self._config.get("preferred_provider")
+        if pref and isinstance(pref, str):
+            try:
+                return ProviderType(pref)
+            except ValueError:
+                pass
+        return None
+
+    @property
+    def providers_config(self) -> Dict[str, Any]:
+        return self._config.get("providers", {})
+
+    @property
+    def offline_fallback(self) -> bool:
+        return self._config.get("offline_fallback", True)
 
 
 class REXAICore:
@@ -82,7 +137,7 @@ class REXAICore:
         if ai.is_available:
             response = await ai.generate("Hello, world!")
         else:
-            response = ai._offline_response("Hello, world!")
+            response = ai.offline_response("Hello, world!")
     """
 
     def __init__(self, config_path: str = "/etc/rex/ai_providers.json",
@@ -90,11 +145,12 @@ class REXAICore:
         self.config_path = config_path
         self.data_path = data_path
         self._initialized = False
-        self._provider: Optional[Any] = None
-        self._provider_type: Optional[str] = None
+        self._provider: Optional[AIProvider] = None
+        self._provider_type: Optional[ProviderType] = None
         self._provider_available = False
-        self._providers: Dict[str, Any] = {}
-        self._memory: Optional[Any] = None
+        self._providers: Dict[ProviderType, AIProvider] = {}
+        self._config = AIProviderConfig(config_path)
+        self._memory: Optional[UserMemory] = None
         self._conversations: Dict[str, Conversation] = {}
 
     @property
@@ -103,9 +159,18 @@ class REXAICore:
         return self._provider_available and self._provider is not None
 
     @property
-    def current_provider(self) -> Optional[str]:
+    def current_provider(self) -> Optional[ProviderType]:
         """Get the currently active provider"""
         return self._provider_type
+
+    @property
+    def provider_status(self) -> ProviderStatus:
+        """Get current provider status"""
+        return ProviderStatus(
+            provider_type=self._provider_type or ProviderType.NONE,
+            available=self._provider_available,
+            last_error=self._provider._last_error if self._provider else None
+        )
 
     async def initialize(self) -> bool:
         """
@@ -116,43 +181,55 @@ class REXAICore:
             self._initialized = True
             return False
 
-        # Initialize user memory
+        # Initialize user memory if available
         if MEMORY_AVAILABLE:
             try:
                 self._memory = UserMemory(1, base_path=self.data_path)
             except Exception:
                 self._memory = None
 
-        # Try providers in order
-        providers_to_try = ["ollama", "openai", "anthropic", "google"]
+        # Try preferred provider first, then others in order
+        preferred = self._config.preferred_provider
+        providers_to_try = []
 
-        for provider_name in providers_to_try:
-            try:
-                provider = create_provider(ProviderType(provider_name))
-                self._providers[provider_name] = provider
+        if preferred:
+            providers_to_try.append(preferred)
 
-                if await provider.check_availability():
-                    self._provider = provider
-                    self._provider_type = provider_name
-                    self._provider_available = True
-                    self._initialized = True
-                    return True
-            except Exception:
-                continue
+        # Add other available providers
+        all_providers = [ProviderType.OLLAMA, ProviderType.OPENAI,
+                        ProviderType.ANTHROPIC, ProviderType.GOOGLE]
+        for p in all_providers:
+            if p != preferred:
+                providers_to_try.append(p)
 
+        for provider_type in providers_to_try:
+            provider = create_provider(provider_type)
+            self._providers[provider_type] = provider
+
+            if await provider.check_availability():
+                self._provider = provider
+                self._provider_type = provider_type
+                self._provider_available = True
+                self._initialized = True
+                return True
+
+        # No providers available - run in offline mode
         self._initialized = True
         return False
 
     async def generate(self, prompt: str, model: Optional[str] = None,
                        max_tokens: int = 1000, stream: bool = False,
                        conversation_id: Optional[str] = None) -> str:
-        """Generate text from the AI."""
+        """
+        Generate text from the AI.
+        """
         if not self._initialized:
             raise RuntimeError("AI Core not initialized")
 
         if not self._provider_available:
             return self._offline_response(prompt)
 
+        # Get conversation context if provided
         if conversation_id and conversation_id in self._conversations:
             conv = self._conversations[conversation_id]
             prompt = conv.to_prompt()
@@ -160,15 +237,16 @@ class REXAICore:
         try:
             return await self._provider.generate(prompt, model, max_tokens, stream)
         except Exception as e:
-            # Try another provider
-            for pname, provider in self._providers.items():
-                if pname != self._provider_type and hasattr(provider, 'available') and provider.available:
+            # Try to use another available provider
+            for ptype, provider in self._providers.items():
+                if ptype != self._provider_type and provider.available:
                     try:
                         self._provider = provider
-                        self._provider_type = pname
+                        self._provider_type = ptype
                         return await provider.generate(prompt, model, max_tokens, stream)
                     except Exception:
                         continue
+            # All providers failed
             return self._offline_response(prompt)
 
     async def list_models(self) -> List[ModelInfo]:
@@ -199,8 +277,12 @@ class REXAICore:
         conv = self._conversations[conversation_id]
         conv.add_message(role, content)
 
-        response = await self.generate(conv.to_prompt(), conversation_id=conversation_id)
+        response = await self.generate(
+            conv.to_prompt(),
+            conversation_id=conversation_id
+        )
         conv.add_message("assistant", response)
+
         return response
 
     def store_preference(self, key: str, value: Any) -> bool:
@@ -224,8 +306,7 @@ class REXAICore:
 
     def _offline_response(self, prompt: str) -> str:
         """Generate a response when no AI provider is available"""
-        providers = [p for p in ["ollama", "openai", "anthropic", "google"]]
-        return f"[Offline Mode] I cannot process your request. No AI provider is available.\n\nAvailable providers: {providers}"
+        return f"[Offline Mode] I cannot process your request. No AI provider is available.\n\nCurrently available providers: {[p.value for p in ProviderType if p != ProviderType.NONE]}, none are running or configured."
 
     def shutdown(self):
         """Clean shutdown of all provider connections"""
@@ -241,4 +322,5 @@ class REXAICore:
         self._initialized = False
 
 
-__all__ = ["REXAICore", "ProviderType", "ModelInfo", "Conversation", "ProviderStatus"]
+# Placeholder implementations for module imports
+__all__ = ["REXAICore", "ProviderType", "ModelInfo", "Conversation", "ProviderStatus", "AIProviderConfig"]

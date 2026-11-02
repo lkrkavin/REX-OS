@@ -56,6 +56,7 @@ info "Starting live-build configuration..."
 lb clean 2>/dev/null || true
 
 # Configure live-build
+# Mirror settings are defined in live-build.conf - do NOT override here
 lb config \
     --ignore-system-defaults \
     --mode debian \
@@ -68,9 +69,7 @@ lb config \
     --linux-flavours amd64 \
     --memtest none \
     --security True \
-    --source False \
-    --mirror-bootstrap "https://deb.debian.org/debian/" \
-    --mirror-chroot "https://deb.debian.org/debian/"
+    --source False
 
 info "Build configuration complete."
 

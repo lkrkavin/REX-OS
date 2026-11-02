@@ -8,6 +8,7 @@ Supported providers:
 - OpenAI (requires OPENAI_API_KEY)
 - Anthropic (requires ANTHROPIC_API_KEY)
 - Google (requires GOOGLE_API_KEY)
+- HuggingFace (requires HUGGING_FACE_API_KEY)
 """
 
 import asyncio
@@ -22,9 +23,13 @@ from abc import ABC, abstractmethod
 class ProviderType(Enum):
     """Supported AI providers"""
     OLLAMA = "ollama"
+    LLAMA_CPP = "llamacpp"
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
+    HUGGING_FACE = "huggingface"
+    NONE = "none"  # Alias for offline mode (backward compatibility)
+    OFFLINE = "offline"  # Fallback mode
 
 
 @dataclass
@@ -92,6 +97,7 @@ class OllamaProvider(AIProvider):
                  base_url: Optional[str] = None):
         super().__init__(config)
         self.base_url = base_url or os.environ.get("OLLAMA_URL", "http://localhost:11434")
+        self._models_cache: List[ModelInfo] = []
 
     async def check_availability(self) -> bool:
         """Check if Ollama server is running"""
@@ -183,6 +189,7 @@ class OpenAIProvider(AIProvider):
     def __init__(self, config: Optional[ProviderConfig] = None):
         super().__init__(config)
         self.api_key = os.environ.get("OPENAI_API_KEY")
+        self._client = None
 
     async def check_availability(self) -> bool:
         """Check if OpenAI API key is configured"""
@@ -234,6 +241,7 @@ class OpenAIProvider(AIProvider):
         return [
             ModelInfo(name="gpt-4", provider=ProviderType.OPENAI, capabilities=["text-generation"], context_length=8192),
             ModelInfo(name="gpt-3.5-turbo", provider=ProviderType.OPENAI, capabilities=["text-generation"], context_length=4096),
+            ModelInfo(name="gpt-3.5-turbo-16k", provider=ProviderType.OPENAI, capabilities=["text-generation"], context_length=16384),
         ]
 
     def shutdown(self):
@@ -302,6 +310,7 @@ class AnthropicProvider(AIProvider):
         return [
             ModelInfo(name="claude-3-opus-20240229", provider=ProviderType.ANTHROPIC, capabilities=["text-generation"], context_length=100000),
             ModelInfo(name="claude-3-sonnet-20240229", provider=ProviderType.ANTHROPIC, capabilities=["text-generation"], context_length=100000),
+            ModelInfo(name="claude-3-haiku-20240307", provider=ProviderType.ANTHROPIC, capabilities=["text-generation"], context_length=100000),
         ]
 
     def shutdown(self):
@@ -361,6 +370,7 @@ class GoogleProvider(AIProvider):
         """List Google models"""
         return [
             ModelInfo(name="gemini-pro", provider=ProviderType.GOOGLE, capabilities=["text-generation"], context_length=32768),
+            ModelInfo(name="gemini-pro-vision", provider=ProviderType.GOOGLE, capabilities=["text-generation", "vision"], context_length=32768),
         ]
 
     def shutdown(self):
@@ -368,13 +378,168 @@ class GoogleProvider(AIProvider):
         self.api_key = None
 
 
+class LlamaCppProvider(AIProvider):
+    """llama.cpp local AI provider"""
+
+    def __init__(self, config: Optional[ProviderConfig] = None,
+                 base_url: Optional[str] = None):
+        super().__init__(config)
+        self.base_url = base_url or os.environ.get("LLAMA_CPP_URL", "http://localhost:8080")
+        self._models_cache: List[ModelInfo] = []
+
+    async def check_availability(self) -> bool:
+        """Check if llama.cpp server is running"""
+        try:
+            import aiohttp
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{self.base_url}/model") as resp:
+                    if resp.status == 200:
+                        self._available = True
+                        self._last_error = None
+                        return True
+            self._available = False
+            self._last_error = "llama.cpp server not responding"
+            return False
+        except Exception as e:
+            self._available = False
+            self._last_error = str(e)
+            return False
+
+    async def generate(self, prompt: str, model: Optional[str] = None,
+                       max_tokens: int = 1000, stream: bool = False) -> str:
+        """Generate response from llama.cpp model"""
+        if not self._available:
+            await self.check_availability()
+
+        if not self._available:
+            raise RuntimeError(f"llama.cpp not available: {self._last_error}")
+
+        try:
+            import aiohttp
+
+            # llama.cpp uses /completion endpoint
+            payload = {
+                "prompt": prompt,
+                "max_tokens": max_tokens,
+                "stream": stream
+            }
+
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(
+                    f"{self.base_url}/completion",
+                    json=payload
+                ) as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return data.get("content", data.get("response", ""))
+                    else:
+                        error_text = await resp.text()
+                        raise RuntimeError(f"llama.cpp API error: {resp.status} - {error_text}")
+        except Exception as e:
+            self._last_error = str(e)
+            raise
+
+    async def list_models(self) -> List[ModelInfo]:
+        """List llama.cpp models"""
+        if not self._available:
+            await self.check_availability()
+
+        if not self._available:
+            return []
+
+        try:
+            import aiohttp
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.get(f"{self.base_url}/model") as resp:
+                    if resp.status == 200:
+                        data = await resp.json()
+                        return [ModelInfo(
+                            name=data.get("model", "llama.cpp"),
+                            provider=ProviderType.LLAMA_CPP,
+                            capabilities=["text-generation"],
+                            context_length=data.get("context_length", 4096)
+                        )]
+        except Exception:
+            pass
+
+        return [ModelInfo(
+            name="llama.cpp",
+            provider=ProviderType.LLAMA_CPP,
+            capabilities=["text-generation"],
+            context_length=4096
+        )]
+
+    def shutdown(self):
+        """Clean shutdown"""
+        pass
+
+
+class OfflineProvider(AIProvider):
+    """Offline fallback provider - provides template responses"""
+
+    def __init__(self, config: Optional[ProviderConfig] = None):
+        super().__init__(config)
+        self._templates = {
+            'greeting': "Hello! I'm REX OS. I'm currently running in offline mode, so my responses will be limited. How can I assist you today?",
+            'help': "I'm in offline mode right now. I can help with basic questions, but for AI-powered assistance, you'll need to install an AI provider like Ollama.",
+            'default': "I'm currently running in offline mode. I don't have access to AI capabilities right now. Would you like me to help with something else?",
+            'error': "I encountered an error processing your request.",
+            'acknowledge': "I acknowledge your request. This is a basic offline response."
+        }
+
+    async def check_availability(self) -> bool:
+        """Offline provider is always available"""
+        self._available = True
+        self._last_error = None
+        return True
+
+    async def generate(self, prompt: str, model: Optional[str] = None,
+                       max_tokens: int = 1000, stream: bool = False) -> str:
+        """Generate a template response based on prompt content"""
+        prompt_lower = prompt.lower() if prompt else ""
+
+        if any(w in prompt_lower for w in ['hello', 'hi', 'hey', 'greetings', 'good']):
+            return self._templates['greeting']
+        elif 'help' in prompt_lower or 'assist' in prompt_lower:
+            return self._templates['help']
+        else:
+            return self._templates['default']
+
+    async def list_models(self) -> List[ModelInfo]:
+        """Return offline model info"""
+        return [ModelInfo(
+            name="offline",
+            provider=ProviderType.OFFLINE,
+            capabilities=["text-generation"],
+            context_length=4096
+        )]
+
+    def shutdown(self):
+        """Clean shutdown"""
+        pass
+
+    def get_template_response(self, key: str, **kwargs) -> str:
+        """Get a template response with optional formatting"""
+        template = self._templates.get(key, self._templates['default'])
+        try:
+            return template.format(**kwargs)
+        except KeyError:
+            return template
+
+
 def get_available_providers() -> Dict[str, ProviderType]:
     """Get dictionary of available provider types by name"""
     return {
         "ollama": ProviderType.OLLAMA,
+        "llamacpp": ProviderType.LLAMA_CPP,
         "openai": ProviderType.OPENAI,
         "anthropic": ProviderType.ANTHROPIC,
         "google": ProviderType.GOOGLE,
+        "huggingface": ProviderType.HUGGING_FACE,
+        "offline": ProviderType.OFFLINE,
     }
 
 
@@ -382,18 +547,22 @@ def create_provider(provider_type: ProviderType, config: Optional[ProviderConfig
     """Factory function to create a provider instance"""
     if provider_type == ProviderType.OLLAMA:
         return OllamaProvider(config=config)
+    elif provider_type == ProviderType.LLAMA_CPP:
+        return LlamaCppProvider(config=config)
     elif provider_type == ProviderType.OPENAI:
         return OpenAIProvider(config=config)
     elif provider_type == ProviderType.ANTHROPIC:
         return AnthropicProvider(config=config)
     elif provider_type == ProviderType.GOOGLE:
         return GoogleProvider(config=config)
+    elif provider_type == ProviderType.OFFLINE or provider_type == ProviderType.NONE:
+        return OfflineProvider(config=config)
     else:
         raise ValueError(f"Unknown provider type: {provider_type}")
 
 
 __all__ = [
     "ProviderType", "ModelInfo", "ProviderConfig", "AIProvider",
-    "OllamaProvider", "OpenAIProvider", "AnthropicProvider", "GoogleProvider",
+    "OllamaProvider", "LlamaCppProvider", "OpenAIProvider", "AnthropicProvider", "GoogleProvider", "OfflineProvider",
     "get_available_providers", "create_provider"
 ]
