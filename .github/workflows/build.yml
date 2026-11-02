@@ -40,7 +40,6 @@ jobs:
             wget \
             curl \
             ca-certificates \
-            grub-efi-ia32 \
             grub-efi-amd64 \
             mtools \
             python3 \
