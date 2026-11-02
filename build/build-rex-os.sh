@@ -66,8 +66,7 @@ lb config \
     --linux-flavours amd64 \
     --memtest none \
     --security True \
-    --source False \
-    --updates False
+    --source False
 
 info "Build configuration complete."
 
