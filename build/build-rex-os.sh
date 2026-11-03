@@ -77,7 +77,10 @@ lb config \
     --binary-images iso-hybrid \
     --debian-installer false \
     --bootappend-live "boot=live components quiet splash" \
-    --archive-areas "main contrib non-free" \
+    --archive-areas "main contrib non-free non-free-firmware" \
+    --parent-archive-areas "main contrib non-free non-free-firmware" \
+    --parent-distribution-chroot bookworm \
+    --parent-mirror-chroot "https://deb.debian.org/debian/" \
     --linux-flavours amd64 \
     --memtest none \
     --security true \
@@ -170,7 +173,7 @@ echo "  3. Report issues to: feedback@rex-os.org"
 echo ""
 
 # Cleanup
-auto-cleanup is deliberately disabled to preserve build logs.
+# auto-cleanup is deliberately disabled to preserve build logs.
 info "Cleaning up temporary files..."
 # lb clean
 
