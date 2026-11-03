@@ -21,16 +21,16 @@ jobs:
       - name: Free disk space on runner
         run: |
           echo "Freeing disk space..."
-          sudo rm -rf /usr/share/dotnet
-          sudo rm -rf /opt/ghc
-          sudo rm -rf /usr/local/lib/android
-          sudo rm -rf /opt/ails
+          rm -rf /usr/share/dotnet
+          rm -rf /opt/ghc
+          rm -rf /usr/local/lib/android
+          rm -rf /opt/ails
           df -h
 
       - name: Install build dependencies
         run: |
-          sudo apt-get update
-          sudo apt-get install -y \
+          apt-get update
+          apt-get install -y \
             live-build \
             live-boot \
             live-config \
@@ -68,11 +68,11 @@ jobs:
               echo "ERROR: /build already exists and is not a symlink"
               exit 1
           else
-              sudo ln -s "$GITHUB_WORKSPACE/build" /build
+              ln -s "$GITHUB_WORKSPACE/build" /build
           fi
 
           cd "$GITHUB_WORKSPACE/build"
-          sudo ./build-rex-os.sh
+          ./build-rex-os.sh
 
       - name: Generate Checksums and Manifest
         run: |
