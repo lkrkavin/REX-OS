@@ -46,7 +46,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 # Check available disk space
 AVAILABLE=$(df / | awk 'NR==2 {print $4}')
-if [ "$AVAILABLE" -lt 3072000 ]; then
+if [ "$AVAILABLE" -lt 31457280 ]; then
     error "Insufficient disk space. Need at least 30GB free."
 fi
 
