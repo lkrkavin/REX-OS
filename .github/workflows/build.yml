@@ -12,6 +12,7 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
+    container: debian:bookworm
 
     steps:
       - name: Checkout repository
