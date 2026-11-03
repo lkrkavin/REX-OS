@@ -12,7 +12,6 @@ on:
 jobs:
   build-iso:
     runs-on: ubuntu-latest
-    container: debian:bookworm
 
     steps:
       - name: Checkout repository
@@ -29,8 +28,8 @@ jobs:
 
       - name: Install build dependencies
         run: |
-          apt-get update
-          apt-get install -y \
+          sudo apt-get update
+          sudo apt-get install -y \
             live-build \
             live-boot \
             live-config \
@@ -68,11 +67,11 @@ jobs:
               echo "ERROR: /build already exists and is not a symlink"
               exit 1
           else
-              ln -s "$GITHUB_WORKSPACE/build" /build
+              sudo ln -s "$GITHUB_WORKSPACE/build" /build
           fi
 
           cd "$GITHUB_WORKSPACE/build"
-          ./build-rex-os.sh
+          sudo ./build-rex-os.sh
 
       - name: Generate Checksums and Manifest
         run: |
