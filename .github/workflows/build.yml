@@ -2,7 +2,7 @@ name: Build REX OS ISO
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "fix/iso-build" ]
     tags:
       - 'v*'
   pull_request:
