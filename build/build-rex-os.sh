@@ -77,7 +77,7 @@ lb config \
     --binary-images iso-hybrid \
     --debian-installer false \
     --bootappend-live "boot=live components quiet splash" \
-    --archive-areas "main contrib non-free" \
+    --archive-areas "main contrib non-free non-free-firmware" \
     --linux-flavours amd64 \
     --memtest none \
     --security true \
