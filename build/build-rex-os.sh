@@ -85,7 +85,8 @@ lb config \
     --mirror-bootstrap "https://deb.debian.org/debian/" \
     --mirror-chroot "https://deb.debian.org/debian/" \
     --mirror-binary "https://deb.debian.org/debian/" \
-    --mirror-debian-installer "https://deb.debian.org/debian/"
+    --mirror-debian-installer "https://deb.debian.org/debian/" \
+    --mirror-security "https://deb.debian.org/debian-security/"
 
 info "Build configuration complete."
 
