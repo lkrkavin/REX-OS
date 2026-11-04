@@ -78,9 +78,6 @@ lb config \
     --debian-installer false \
     --bootappend-live "boot=live components quiet splash" \
     --archive-areas "main contrib non-free non-free-firmware" \
-    --parent-archive-areas "main contrib non-free non-free-firmware" \
-    --parent-distribution-chroot bookworm \
-    --parent-mirror-chroot "https://deb.debian.org/debian/" \
     --linux-flavours amd64 \
     --memtest none \
     --security true \
