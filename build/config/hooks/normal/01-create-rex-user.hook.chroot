@@ -47,13 +47,13 @@ else
     # --home-dir /var/lib/rex: Set home to our data directory
     # --no-create-home: Don't create home (we create it explicitly)
     # --shell /usr/sbin/nologin: No interactive shell
-    # --gecos "REX OS": System user description
+    # --comment "REX OS": System user description
     useradd --system \
             --gid rex \
             --home-dir /var/lib/rex \
             --no-create-home \
             --shell /usr/sbin/nologin \
-            --gecos "REX OS System User" \
+            --comment "REX OS System User" \
             rex
 
     NEW_UID=$(getent passwd rex | cut -d: -f3)
