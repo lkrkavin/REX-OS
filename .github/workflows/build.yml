@@ -49,6 +49,15 @@ jobs:
             python3-bs4 \
             debian-archive-keyring
 
+      - name: Verify live-build security mirror support
+        run: |
+          echo "live-build version:"
+          lb --version
+          echo "Checking supported security mirror options:"
+          lb config --help | grep -E -- '--mirror-(chroot|binary)-security' || true
+          echo "Debian Bookworm security repository:"
+          curl -fsSL https://deb.debian.org/debian-security/dists/bookworm-security/InRelease >/dev/null
+
       - name: Prepare build environment
         run: |
           mkdir -p build/output
