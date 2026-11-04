@@ -70,12 +70,11 @@ if ! curl -fsSL https://deb.debian.org/debian/ >/dev/null 2>&1; then
 fi
 
 lb config \
-    --ignore-system-defaults \
     --mode debian \
     --distribution bookworm \
     --architecture amd64 \
     --binary-images iso-hybrid \
-    --debian-installer false \
+    --debian-installer none \
     --bootappend-live "boot=live components quiet splash" \
     --archive-areas "main contrib non-free non-free-firmware" \
     --linux-flavours amd64 \
