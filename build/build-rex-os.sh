@@ -46,7 +46,7 @@ mkdir -p "${OUTPUT_DIR}"
 
 # Check available disk space
 AVAILABLE=$(df / | awk 'NR==2 {print $4}')
-if [ "$AVAILABLE" -lt 3072000 ]; then
+if [ "$AVAILABLE" -lt 31457280 ]; then
     error "Insufficient disk space. Need at least 30GB free."
 fi
 
@@ -85,7 +85,9 @@ lb config \
     --mirror-bootstrap "https://deb.debian.org/debian/" \
     --mirror-chroot "https://deb.debian.org/debian/" \
     --mirror-binary "https://deb.debian.org/debian/" \
-    --mirror-debian-installer "https://deb.debian.org/debian/"
+    --mirror-debian-installer "https://deb.debian.org/debian/" \
+    --mirror-chroot-security "https://deb.debian.org/debian-security/" \
+    --mirror-binary-security "https://deb.debian.org/debian-security/"
 
 info "Build configuration complete."
 
@@ -170,7 +172,7 @@ echo "  3. Report issues to: feedback@rex-os.org"
 echo ""
 
 # Cleanup
-auto-cleanup is deliberately disabled to preserve build logs.
+# auto-cleanup is deliberately disabled to preserve build logs.
 info "Cleaning up temporary files..."
 # lb clean
 
