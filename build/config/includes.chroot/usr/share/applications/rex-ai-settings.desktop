@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=REX AI Settings
+Comment=Configure the OpenRouter provider and model for REX AI
+Exec=/usr/bin/python3 /opt/rex-os/ui/rex_ai_settings.py
+Icon=preferences-system
+Terminal=false
+Categories=Settings;System;
