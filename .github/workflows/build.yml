@@ -1,5 +1,9 @@
 name: Build REX OS ISO
 
+concurrency:
+  group: rex-os-build-${{ github.ref }}
+  cancel-in-progress: true
+
 on:
   push:
     branches: [ "main", "master", "fix/iso-build" ]
