@@ -2,6 +2,7 @@
 """REX floating robot with local offline 'Hey Rex' activation."""
 
 import sys
+sys.path.insert(0, "/opt/rex-os")
 import subprocess
 
 try:
