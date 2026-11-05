@@ -17,6 +17,7 @@ States:
 import sys
 import os
 import asyncio
+import subprocess
 from pathlib import Path
 from typing import Optional
 
@@ -66,8 +67,7 @@ class REXRobot(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint |
             Qt.WindowType.Tool |
-            Qt.WindowType.StayOnTop |
-            Qt.WindowType.X11BypassWindowManagerHint
+            Qt.WindowType.StayOnTop
         )
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
         self.resize(120, 120)
@@ -78,10 +78,10 @@ class REXRobot(QWidget):
         self.state = RobotState.IDLE
         self.robot_color = QColor(0, 194, 203)  # Cyan
 
-        # AI Integration
+        # AI is initialized by the REX daemon / assistant worker, not from
+        # the GUI constructor. Avoid scheduling asyncio tasks without a loop.
         self.ai_core: Optional[REXAICore] = None
         self.conversation: Optional[ConversationManager] = None
-        self._init_ai()
 
         # Timer for animation
         self._animation_timer = QTimer(self)
@@ -125,6 +125,18 @@ class REXRobot(QWidget):
         if event.button() == Qt.MouseButton.LeftButton:
             self.dragging = True
             self.offset = event.pos()
+
+    def mouseDoubleClickEvent(self, event):
+        """Open the full REX Assistant when the robot is double-clicked."""
+        try:
+            subprocess.Popen(
+                [sys.executable, "/opt/rex-os/ui/rex_assistant.py"],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.DEVNULL,
+                start_new_session=True,
+            )
+        except Exception as exc:
+            print(f"Unable to open REX Assistant: {exc}", file=sys.stderr)
 
     def mouseReleaseEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
