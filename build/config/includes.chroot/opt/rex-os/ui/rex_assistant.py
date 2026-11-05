@@ -1,217 +1,191 @@
 #!/usr/bin/env python3
-"""
-REX Assistant Window
-Main AI assistant interface for REX OS.
-
-Features:
-- Chat interface with AI
-- Push-to-talk button
-- Provider status display
-- Voice/mic controls
-"""
+"""REX Assistant desktop chat window with a background AI worker."""
 
 import sys
-import os
 import asyncio
 from typing import Optional
-from datetime import datetime
 
 try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QTextEdit, QLineEdit, QPushButton, QLabel, QFrame, QGridLayout,
-        QComboBox, QSlider, QCheckBox, QMessageBox, QProgressBar
+        QComboBox
     )
-    from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal, QObject
-    from PyQt6.QtGui import QFont, QColor, QPalette
+    from PyQt6.QtCore import Qt, QTimer, QThread, pyqtSignal
     PYQT6_AVAILABLE = True
 except ImportError:
     PYQT6_AVAILABLE = False
 
 try:
-    from ais.conversation_manager import ConversationManager, ConversationMode, AgentStatus
-    from ais.voice_assistant import VoiceAssistant, VoiceState
+    from ais.ai_core import REXAICore
+    from ais.conversation_manager import ConversationManager
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
 
 
-class AssistantWindow(QMainWindow):
-    """Main assistant window for REX OS"""
+if PYQT6_AVAILABLE:
+    class AIWorker(QThread):
+        """Own the asyncio loop and AI manager outside the Qt UI thread."""
+        response_ready = pyqtSignal(str)
+        status_ready = pyqtSignal(str, bool)
 
-    def __init__(self, conversation_manager: Optional[ConversationManager] = None):
-        super().__init__()
-        self.setWindowTitle("REX Assistant")
-        self.resize(400, 500)
-        self.setMinimumWidth(300)
+        def __init__(self):
+            super().__init__()
+            self.loop = None
+            self.manager = None
 
-        self._manager = conversation_manager
-        self.setWindowFlags(
-            Qt.WindowType.Window |
-            Qt.WindowType.WindowCloseButtonHint |
-            Qt.WindowType.WindowMaximizeButtonHint
-        )
+        def run(self):
+            if not AI_AVAILABLE:
+                self.status_ready.emit("AI modules unavailable", False)
+                return
 
-        self._setup_ui()
-        self._setup_connections()
+            self.loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(self.loop)
+            try:
+                core = REXAICore()
+                self.manager = ConversationManager(ai_core=core)
+                available = self.loop.run_until_complete(self.manager.initialize())
+                provider = core.current_provider.value if core.current_provider else "Offline"
+                self.status_ready.emit(provider, bool(available))
+                self.loop.run_forever()
+            except Exception as exc:
+                self.status_ready.emit(str(exc), False)
+            finally:
+                if self.manager:
+                    try:
+                        self.manager.shutdown()
+                    except Exception:
+                        pass
+                if self.loop and not self.loop.is_closed():
+                    self.loop.close()
 
-        # Timer for updates
-        self._update_timer = QTimer(self)
-        self._update_timer.timeout.connect(self._update_status)
-        self._update_timer.start(1000)
+        def send_message(self, message: str):
+            if not self.loop or not self.manager or not self.loop.is_running():
+                self.response_ready.emit(
+                    "REX AI is not connected. Check that an AI provider is configured and running."
+                )
+                return
 
-    def _setup_ui(self):
-        """Create the user interface"""
-        central = QWidget()
-        self.setCentralWidget(central)
-        main_layout = QVBoxLayout(central)
+            future = asyncio.run_coroutine_threadsafe(
+                self.manager.send_message(message), self.loop
+            )
 
-        # Status bar
-        self._status_label = QLabel("Initializing REX Assistant...")
-        self._status_label.setStyleSheet("background: #2a2d3a; color: #e0e0e0; padding: 8px;")
-        main_layout.addWidget(self._status_label)
+            def completed(task):
+                try:
+                    answer = task.result()
+                    self.response_ready.emit(
+                        answer or "No response received. Check your AI provider."
+                    )
+                except Exception as exc:
+                    self.response_ready.emit(f"AI request failed: {exc}")
 
-        # Chat display
-        self._chat_display = QTextEdit()
-        self._chat_display.setReadOnly(True)
-        self._chat_display.setStyleSheet("""
-            background: #1a1a1a;
-            color: #e0e0e0;
-            border: 1px solid #444;
-        """)
-        main_layout.addWidget(self._chat_display, 1)
+            future.add_done_callback(completed)
 
-        # Input area
-        input_layout = QHBoxLayout()
-        main_layout.addLayout(input_layout)
-
-        self._input_field = QLineEdit()
-        self._input_field.setPlaceholderText("Type a message...")
-        input_layout.addWidget(self._input_field, 1)
-
-        self._send_button = QPushButton("Send")
-        self._send_button.clicked.connect(self._send_message)
-        input_layout.addWidget(self._send_button)
-
-        self._mic_button = QPushButton("🎙️")
-        self._mic_button.clicked.connect(self._toggle_mic)
-        self._mic_button.setCheckable(True)
-        input_layout.addWidget(self._mic_button)
-
-        # Options panel
-        options_frame = QFrame()
-        options_frame.setStyleSheet("background: #2a2d3a; border-radius: 8px; margin: 8px;")
-        options_layout = QGridLayout(options_frame)
-
-        # Provider selection
-        options_layout.addWidget(QLabel("Provider:"), 0, 0)
-        self._provider_combo = QComboBox()
-        self._provider_combo.addItems(["Auto", "Ollama", "OpenAI", "Anthropic", "Google"])
-        options_layout.addWidget(self._provider_combo, 0, 1)
-
-        # Status indicators
-        self._ai_status = QLabel("AI: Offline")
-        self._ai_status.setStyleSheet("color: #ff6b6b;")
-        options_layout.addWidget(self._ai_status, 0, 2)
-
-        self._voice_status = QLabel("Voice: Ready")
-        self._voice_status.setStyleSheet("color: #51cf66;")
-        options_layout.addWidget(self._voice_status, 1, 0)
-
-        # Mic mute checkbox
-        self._mute_checkbox = QCheckBox("Mute Mic")
-        self._mute_checkbox.toggled.connect(self._toggle_mute)
-        options_layout.addWidget(self._mute_checkbox, 1, 1)
-
-        main_layout.addWidget(options_frame)
-
-        # Welcome message
-        self._add_message("REX Assistant", "Hello! I'm REX, your AI assistant. How can I help you today?", "assistant")
-
-    def _setup_connections(self):
-        """Setup signal connections"""
-        if self._manager:
-            self._manager.set_on_response(self._on_response)
-            self._manager.set_on_status_change(self._on_status_change)
-
-    def _add_message(self, sender: str, text: str, role: str = "user"):
-        """Add a message to the chat display"""
-        from PyQt6.QtGui import QTextOption
-
-        # Format message
-        html = f"""
-        <div style="margin: 8px 0; padding: 8px; border-radius: 8px;
-                    background: {'#3a3f5a' if role == 'user' else '#2a2a3a'};
-                    color: #e0e0e0;">
-            <b style="color: #00c2cb;">{sender}:</b><br>
-            {text}
-        </div>
-        """
-
-        self._chat_display.append(html)
-        self._chat_display.moveCursor(self._chat_display.verticalScrollBar().bottom())
-
-    def _send_message(self):
-        """Send message to AI"""
-        text = self._input_field.text().strip()
-        if not text:
-            return
-
-        self._add_message("You", text, "user")
-        self._input_field.clear()
-
-        # Simulate response for testing
-        self._add_message("REX", "Processing your request...", "assistant")
-
-    def _toggle_mic(self):
-        """Toggle microphone state"""
-        if self._manager:
-            muted = self._manager.toggle_mute()
-            if muted:
-                self._mic_button.setText("🔇")
-            else:
-                self._mic_button.setText("🎙️")
-
-    def _toggle_mute(self, checked: bool):
-        """Handle mute checkbox"""
-        pass  # Handled by mic button
-
-    def _on_response(self, response: str):
-        """Handle AI response"""
-        self._add_message("REX", response, "assistant")
-
-    def _on_status_change(self, status: AgentStatus):
-        """Handle status change"""
-        if status.ai_available:
-            self._ai_status.setStyleSheet("color: #51cf66;")
-            self._ai_status.setText(f"AI: {status.current_provider or 'Online'}")
-        else:
-            self._ai_status.setStyleSheet("color: #ff6b6b;")
-            self._ai_status.setText("AI: Offline")
-
-    def _update_status(self):
-        """Update status indicators"""
-        # This is called periodically
-        pass
-
-    def closeEvent(self, event):
-        """Handle window close"""
-        if self._manager:
-            self._manager.shutdown()
-        event.accept()
+        def stop(self):
+            if self.loop and self.loop.is_running():
+                self.loop.call_soon_threadsafe(self.loop.stop)
 
 
-def create_assistant(conversation_manager: Optional[ConversationManager] = None) -> Optional[QMainWindow]:
-    """Create and return the assistant window"""
+    class AssistantWindow(QMainWindow):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("REX Assistant")
+            self.resize(560, 620)
+            self.setMinimumSize(380, 440)
+            self.setStyleSheet("""
+                QMainWindow, QWidget { background: #171923; color: #e5e7eb; }
+                QTextEdit { background: #10131b; color: #e5e7eb;
+                            border: 1px solid #3b4255; border-radius: 8px; padding: 8px; }
+                QLineEdit { background: #242938; color: #ffffff;
+                            border: 1px solid #00c2cb; border-radius: 8px; padding: 10px; }
+                QPushButton { background: #263344; color: #ffffff;
+                              border: 1px solid #00c2cb; border-radius: 8px; padding: 9px 16px; }
+                QPushButton:hover { background: #35445b; }
+                QComboBox { background: #242938; color: #ffffff; padding: 6px; }
+            """)
+
+            central = QWidget()
+            self.setCentralWidget(central)
+            layout = QVBoxLayout(central)
+
+            self.status = QLabel("REX AI: Starting...")
+            self.status.setStyleSheet(
+                "background:#242938; color:#00c2cb; padding:10px; border-radius:8px;"
+            )
+            layout.addWidget(self.status)
+
+            self.chat = QTextEdit()
+            self.chat.setReadOnly(True)
+            layout.addWidget(self.chat, 1)
+
+            row = QHBoxLayout()
+            self.input = QLineEdit()
+            self.input.setPlaceholderText("Type a message for REX...")
+            self.input.returnPressed.connect(self.send_message)
+            row.addWidget(self.input, 1)
+            self.send_button = QPushButton("Send")
+            self.send_button.clicked.connect(self.send_message)
+            row.addWidget(self.send_button)
+            layout.addLayout(row)
+
+            self.provider = QComboBox()
+            self.provider.addItems(["Automatic provider selection", "Ollama", "OpenAI", "Anthropic", "Google"])
+            self.provider.setToolTip("Provider selection is currently controlled by /etc/rex/ai_providers.json")
+            layout.addWidget(self.provider)
+
+            self.worker = AIWorker()
+            self.worker.response_ready.connect(self.show_response)
+            self.worker.status_ready.connect(self.show_status)
+            self.worker.start()
+
+            self.add_message("REX", "Hello! I'm REX. The chat is connecting to your configured AI provider.", False)
+
+        def add_message(self, sender: str, message: str, user: bool):
+            safe = (message.replace("&", "&amp;").replace("<", "&lt;")
+                    .replace(">", "&gt;").replace("\n", "<br>"))
+            color = "#26384a" if user else "#222638"
+            self.chat.append(
+                f'<div style="margin:8px;padding:10px;background:{color};'
+                f'border-radius:8px;"><b style="color:#00c2cb">{sender}:</b><br>{safe}</div>'
+            )
+
+        def send_message(self):
+            message = self.input.text().strip()
+            if not message:
+                return
+            self.input.clear()
+            self.add_message("You", message, True)
+            self.send_button.setEnabled(False)
+            self.worker.send_message(message)
+
+        def show_response(self, response: str):
+            self.add_message("REX", response, False)
+            self.send_button.setEnabled(True)
+
+        def show_status(self, provider: str, online: bool):
+            state = "Online" if online else "Offline"
+            color = "#51cf66" if online else "#ffb86c"
+            self.status.setText(f"REX AI: {state} — {provider}")
+            self.status.setStyleSheet(
+                f"background:#242938;color:{color};padding:10px;border-radius:8px;"
+            )
+
+        def closeEvent(self, event):
+            self.worker.stop()
+            self.worker.wait(3000)
+            event.accept()
+
+
+def main():
     if not PYQT6_AVAILABLE:
-        return None
-
-    app = QApplication.instance() or QApplication(sys.argv)
-    window = AssistantWindow(conversation_manager)
+        print("REX Assistant requires python3-pyqt6.")
+        return 1
+    app = QApplication(sys.argv)
+    window = AssistantWindow()
     window.show()
-    return window
+    return app.exec()
 
 
 if __name__ == "__main__":
-    create_assistant()
-    QApplication.instance().exec()
+    sys.exit(main())
