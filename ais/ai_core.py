@@ -86,7 +86,8 @@ class AIProviderConfig:
                 "ollama": {"base_url": "http://localhost:11434", "timeout": 30},
                 "openai": {"timeout": 30},
                 "anthropic": {"timeout": 30},
-                "google": {"timeout": 30}
+                "google": {"timeout": 30},
+                "openrouter": {"timeout": 45}
             },
             "offline_fallback": True,
             "max_context_length": 4096,
@@ -197,7 +198,7 @@ class REXAICore:
 
         # Add other available providers
         all_providers = [ProviderType.OLLAMA, ProviderType.OPENAI,
-                        ProviderType.ANTHROPIC, ProviderType.GOOGLE]
+                        ProviderType.ANTHROPIC, ProviderType.GOOGLE, ProviderType.OPENROUTER]
         for p in all_providers:
             if p != preferred:
                 providers_to_try.append(p)
