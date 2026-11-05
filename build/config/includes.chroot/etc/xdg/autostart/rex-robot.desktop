@@ -1,15 +1,14 @@
 [Desktop Entry]
 Type=Application
+Name=REX Robot
+Comment=REX OS floating robot assistant
 Exec=/usr/bin/python3 /opt/rex-os/ui/rex_robot.py
+TryExec=/usr/bin/python3
 Hidden=false
 NoDisplay=false
+OnlyShowIn=KDE;
 X-GNOME-Autostart-enabled=true
-Name=REX Robot
-Comment=REX OS Robot Assistant
 X-KDE-autostart-after=panel
+X-KDE-autostart-delay=15
 X-KDE-StartupNotify=false
 Terminal=false
-Categories=
-
-# Startup delay to ensure KDE is ready
-X-KDE-autostart-delay=5
