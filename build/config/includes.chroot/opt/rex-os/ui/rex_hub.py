@@ -31,21 +31,21 @@ if QT_AVAILABLE:
             self.setWindowTitle("REX Top Panel")
             self.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint|Qt.WindowType.Tool)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            self.resize(760,54)
+            self.resize(900,58)
             self.setStyleSheet("""
-                QWidget#surface{background:rgba(13,20,36,242);border:1px solid #286078;border-radius:15px;}
-                QLabel{color:#eaf7ff;} QLabel#brand{color:#67e8f9;font-size:17px;font-weight:800;}
-                QLabel#muted{color:#9aacc5;font-size:10px;}
-                QPushButton{color:#e8f6ff;background:#1b2b43;border:1px solid #2e506a;border-radius:10px;padding:7px 12px;font-weight:600;}
-                QPushButton:hover{background:#14566b;border-color:#65d9eb;}
-                QWidget#dock{background:rgba(15,23,41,245);border:1px solid #3a6380;border-radius:22px;}
-                QPushButton[dock="true"]{font-size:13px;padding:12px 16px;border-radius:14px;}
+                QWidget#surface{background:rgba(13,18,32,238);border:1px solid rgba(130,170,220,85);border-radius:21px;}
+                QLabel{color:#eaf7ff;} QLabel#brand{color:#f2f7ff;font-size:18px;font-weight:850;letter-spacing:2px;}
+                QLabel#muted{color:#9caec8;font-size:10px;letter-spacing:1px;}
+                QPushButton{color:#eaf4ff;background:rgba(42,58,82,210);border:1px solid rgba(150,185,220,45);border-radius:15px;padding:9px 15px;font-weight:650;}
+                QPushButton:hover{background:rgba(47,115,145,235);border-color:#78eaff;}
+                QWidget#dock{background:rgba(13,18,32,242);border:1px solid rgba(130,170,220,95);border-radius:25px;}
+                QPushButton[dock="true"]{font-size:13px;padding:13px 17px;border-radius:17px;}
             """)
             root=QVBoxLayout(self);root.setContentsMargins(0,0,0,0)
             surface=QFrame();surface.setObjectName("surface")
             row=QHBoxLayout(surface);row.setContentsMargins(15,5,15,5)
-            brand=QLabel("◈ REX");brand.setObjectName("brand");row.addWidget(brand)
-            sub=QLabel("INTELLIGENCE OS");sub.setObjectName("muted");row.addWidget(sub);row.addStretch(1)
+            brand=QLabel("REX  ◉");brand.setObjectName("brand");row.addWidget(brand)
+            sub=QLabel("INTELLIGENCE  ·  CONNECTED");sub.setObjectName("muted");row.addWidget(sub);row.addStretch(1)
             self.status=QLabel("STARTING");self.status.setObjectName("muted");row.addWidget(self.status)
             root.addWidget(surface)
             self.dock=QWidget()
@@ -54,9 +54,9 @@ if QT_AVAILABLE:
             self.dock.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint|Qt.WindowType.Tool)
             self.dock.setStyleSheet(self.styleSheet())
             dockrow=QHBoxLayout(self.dock);dockrow.setContentsMargins(12,8,12,8);dockrow.setSpacing(8)
-            for name in ("Assistant","Apps","Connect","Files","Browser","Terminal","Settings"):
+            for name in ("✦  REX AI","▦  OMNI","⌁  CONNECT","◫  FILES","⌘  TERMINAL","⚙  SETTINGS"):
                 button=QPushButton(name);button.setProperty("dock","true")
-                button.clicked.connect(lambda checked=False,app=name:launch_fixed_app(app))
+                button.clicked.connect(lambda checked=False,app=name:launch_fixed_app({"✦  REX AI":"Assistant","▦  OMNI":"Apps","⌁  CONNECT":"Connect","◫  FILES":"Files","⌘  TERMINAL":"Terminal","⚙  SETTINGS":"Settings"}[app]))
                 dockrow.addWidget(button)
             self.dock.adjustSize()
             self.position_windows()
