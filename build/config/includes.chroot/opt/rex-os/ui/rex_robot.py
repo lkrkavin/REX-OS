@@ -8,8 +8,8 @@ import subprocess
 
 try:
     from PyQt6.QtWidgets import QApplication, QWidget
-    from PyQt6.QtCore import Qt, QTimer, QPoint, QObject, pyqtSignal
-    from PyQt6.QtGui import QPainter, QColor
+    from PyQt6.QtCore import Qt, QTimer, QPoint, QObject, pyqtSignal, QRectF
+    from PyQt6.QtGui import QPainter, QColor, QPen, QRadialGradient, QConicalGradient
     PYQT6_AVAILABLE = True
 except ImportError:
     PYQT6_AVAILABLE = False
@@ -44,7 +44,7 @@ if PYQT6_AVAILABLE:
                 Qt.WindowType.WindowStaysOnTopHint
             )
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            self.resize(120, 120)
+            self.resize(156, 156)
             self.dragging = False
             self.offset = QPoint()
             self.state = RobotState.IDLE
@@ -118,29 +118,85 @@ if PYQT6_AVAILABLE:
                 self.move(self.mapToGlobal(event.pos() - self.offset))
 
         def paintEvent(self, event):
-            painter = QPainter(self)
-            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
-            painter.setBrush(QColor(24, 31, 48, 238))
-            painter.setPen(QColor(0, 194, 203))
-            painter.drawEllipse(10, 10, 100, 100)
-
+            import math
+            p = QPainter(self)
+            p.setRenderHint(QPainter.RenderHint.Antialiasing)
+            phase = math.radians(self._animation_angle)
+            bob = math.sin(phase * 1.8) * 3.5
+            cx, cy = 78.0, 78.0
             if self.state == RobotState.THINKING:
-                eye_color = QColor(255, 183, 77)
-            elif self.state == RobotState.ERROR or self.state == RobotState.OFFLINE:
-                eye_color = QColor(255, 107, 107)
+                accent = QColor("#a895ff")
+            elif self.state == RobotState.LISTENING:
+                accent = QColor("#62eaff")
+            elif self.state in (RobotState.ERROR, RobotState.OFFLINE):
+                accent = QColor("#ff788b")
             else:
-                eye_color = QColor(73, 224, 235)
-            painter.setBrush(eye_color)
-            painter.setPen(Qt.PenStyle.NoPen)
-            painter.drawEllipse(30, 35, 20, 20)
-            painter.drawEllipse(70, 35, 20, 20)
-            painter.setBrush(QColor(255, 255, 255))
-            painter.drawEllipse(36, 41, 8, 8)
-            painter.drawEllipse(76, 41, 8, 8)
-            painter.setPen(QColor(159, 111, 255))
-            painter.drawLine(60, 10, 60, 0)
-            painter.setBrush(QColor(159, 111, 255))
-            painter.drawEllipse(55, 0, 10, 10)
+                accent = QColor("#70e6d2")
+            pulse = 0.5 + 0.5 * math.sin(phase * 2.2)
+            # soft ambient aura and animated orbit
+            aura = QRadialGradient(78, 78, 76)
+            aura.setColorAt(0, QColor(accent.red(), accent.green(), accent.blue(), 68))
+            aura.setColorAt(1, QColor(9, 14, 28, 0))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(aura)
+            p.drawEllipse(2, 2, 152, 152)
+            p.save()
+            p.translate(cx, cy)
+            p.rotate(self._animation_angle * 0.65)
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            p.setPen(QPen(QColor(accent.red(), accent.green(), accent.blue(), 115), 1.5))
+            p.drawArc(-62, -62, 124, 124, 20 * 16, 105 * 16)
+            p.drawArc(-62, -62, 124, 124, 205 * 16, 65 * 16)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(accent)
+            p.drawEllipse(53, -63, 5, 5)
+            p.restore()
+            # antenna
+            p.setPen(QPen(accent, 2.5))
+            p.drawLine(QPoint(78, int(35 + bob)), QPoint(78, int(22 + bob)))
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(accent)
+            p.drawEllipse(QPoint(78, int(19 + bob)), int(4 + pulse * 2), int(4 + pulse * 2))
+            # side modules
+            p.setBrush(QColor("#263651"))
+            p.setPen(QPen(accent, 2))
+            p.drawRoundedRect(QRectF(27, 59 + bob, 13, 29), 6, 6)
+            p.drawRoundedRect(QRectF(116, 59 + bob, 13, 29), 6, 6)
+            # ceramic shell
+            shell = QRadialGradient(60, 45 + bob, 95)
+            shell.setColorAt(0, QColor("#f4fbff"))
+            shell.setColorAt(1, QColor("#a9c7df"))
+            p.setBrush(shell)
+            p.setPen(QPen(QColor("#8cecff"), 2))
+            p.drawRoundedRect(QRectF(35, 34 + bob, 86, 76), 25, 25)
+            # face glass
+            p.setBrush(QColor("#101c33"))
+            p.setPen(QPen(QColor("#547a9d"), 1.2))
+            p.drawRoundedRect(QRectF(43, 45 + bob, 70, 52), 18, 18)
+            # eyes react to state
+            eye_y = 70 + bob
+            eye_h = 3 if (self._animation_angle % 120) < 4 else (9 if self.state != RobotState.THINKING else 6)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(accent)
+            p.drawRoundedRect(QRectF(56, eye_y - eye_h / 2, 10, eye_h), 4, 4)
+            p.drawRoundedRect(QRectF(90, eye_y - eye_h / 2, 10, eye_h), 4, 4)
+            # expressive mouth
+            p.setPen(QPen(accent, 2))
+            p.setBrush(Qt.BrushStyle.NoBrush)
+            if self.state == RobotState.LISTENING:
+                p.drawEllipse(QRectF(74, 82 + bob, 8, 7))
+            elif self.state == RobotState.THINKING:
+                p.drawPoint(QPoint(78, int(86 + bob)))
+            else:
+                p.drawLine(QPoint(73, int(86 + bob)), QPoint(83, int(86 + bob)))
+            # compact floating body
+            p.setBrush(QColor("#293d5b"))
+            p.setPen(QPen(accent, 1.8))
+            p.drawRoundedRect(QRectF(51, 111 + bob, 54, 25), 10, 10)
+            p.setPen(Qt.PenStyle.NoPen)
+            p.setBrush(accent)
+            p.drawEllipse(QPoint(78, int(123 + bob)), 4, 4)
+            p.end()
 
         def closeEvent(self, event):
             if self._wake_listener:
