@@ -2,6 +2,7 @@
 """REX AI desktop assistant with Google Search context and source links."""
 
 import sys
+sys.path.insert(0, "/opt/rex-os")
 import asyncio
 import html
 from typing import Optional
