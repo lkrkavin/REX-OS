@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """REX Connect device dashboard; pairing and permissions remain explicit."""
 import sys
+sys.path.insert(0, "/opt/rex-os") if "/opt/rex-os" not in sys.path else None
 try:
     from PyQt6.QtWidgets import QApplication,QWidget,QVBoxLayout,QLabel,QListWidget,QPushButton,QMessageBox
     QT=True
