@@ -1,230 +1,160 @@
 #!/usr/bin/env python3
-"""
-REX Robot Assistant UI Module
-A draggable, Qt-based visual assistant for REX OS with AI integration
-
-States:
-- Idle: Robot at rest
-- Listening: Microphone active, eyes pulsing cyan
-- Thinking: Processing request
-- Speaking: TTS active
-- Executing: Action in progress
-- Permission: Awaiting user approval
-- Error: Something went wrong
-- Offline: No AI connectivity
-"""
+"""REX floating robot with local offline 'Hey Rex' activation."""
 
 import sys
-import os
-import asyncio
 import subprocess
-from pathlib import Path
-from typing import Optional
 
 try:
-    from PyQt6.QtWidgets import QApplication, QWidget, QLabel, QVBoxLayout, QPushButton, QHBoxLayout, QTextEdit, QLineEdit
-    from PyQt6.QtCore import Qt, QTimer, QPoint, QThread, pyqtSignal, QTime
-    from PyQt6.QtGui import QPainter, QColor, QFont, QMouseEvent, QIcon
+    from PyQt6.QtWidgets import QApplication, QWidget
+    from PyQt6.QtCore import Qt, QTimer, QPoint, QObject, pyqtSignal
+    from PyQt6.QtGui import QPainter, QColor
     PYQT6_AVAILABLE = True
 except ImportError:
     PYQT6_AVAILABLE = False
-    # Fallback to tkinter
-    try:
-        import tkinter as tk
-        from tkinter import ttk
-        TK_AVAILABLE = True
-    except ImportError:
-        TK_AVAILABLE = False
 
-# Import AI modules - PYTHONPATH=/opt/rex-os is set in systemd service
 try:
-    from ais.ai_core import REXAICore, ProviderType
-    from ais.voice_assistant import VoiceAssistant, VoiceState, VoiceConfig
-    from ais.conversation_manager import ConversationManager, ConversationMode
-    AI_AVAILABLE = True
+    from ais.wake_word import LocalWakeWordListener
 except ImportError:
-    AI_AVAILABLE = False
+    LocalWakeWordListener = None
 
 
 class RobotState:
-    """Visual states for the robot"""
     IDLE = "idle"
     LISTENING = "listening"
     THINKING = "thinking"
-    SPEAKING = "speaking"
-    EXECUTING = "executing"
-    PERMISSION = "permission"
     ERROR = "error"
     OFFLINE = "offline"
 
 
-class REXRobot(QWidget):
-    """A simple draggable robot indicator widget with AI integration"""
+if PYQT6_AVAILABLE:
+    class WakeBridge(QObject):
+        activated = pyqtSignal(object)
+        error = pyqtSignal(str)
 
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("REX 🤖")
-        self.setWindowFlags(
-            Qt.WindowType.FramelessWindowHint |
-            Qt.WindowType.Tool |
-            Qt.WindowType.WindowStaysOnTopHint
-        )
-        self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-        self.resize(120, 120)
-        self.dragging = False
-        self.offset = QPoint()
 
-        # Robot state
-        self.state = RobotState.IDLE
-        self.robot_color = QColor(0, 194, 203)  # Cyan
-
-        # AI is initialized by the REX daemon / assistant worker, not from
-        # the GUI constructor. Avoid scheduling asyncio tasks without a loop.
-        self.ai_core: Optional[REXAICore] = None
-        self.conversation: Optional[ConversationManager] = None
-
-        # Timer for animation
-        self._animation_timer = QTimer(self)
-        self._animation_timer.timeout.connect(self._update_animation)
-        self._animation_angle = 0
-
-        self._start_animation()
-
-    def _init_ai(self):
-        """Initialize AI Core integration"""
-        if not AI_AVAILABLE:
-            return
-
-        try:
-            self.ai_core = REXAICore()
-            # Run async init in background
-            asyncio.create_task(self._init_ai_async())
-        except Exception:
-            pass
-
-    async def _init_ai_async(self):
-        """Async AI initialization"""
-        if self.ai_core:
-            await self.ai_core.initialize()
-
-    def _start_animation(self):
-        """Start the robot animation"""
-        self._animation_timer.start(50)
-
-    def _update_animation(self):
-        """Update animation frame"""
-        self._animation_angle = (self._animation_angle + 2) % 360
-        self.update()
-
-    def set_state(self, state: str):
-        """Set robot state"""
-        self.state = state
-        self.update()
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
-            self.dragging = True
-            self.offset = event.pos()
-
-    def mouseDoubleClickEvent(self, event):
-        """Open the full REX Assistant when the robot is double-clicked."""
-        try:
-            subprocess.Popen(
-                [sys.executable, "/opt/rex-os/ui/rex_assistant.py"],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                start_new_session=True,
+    class REXRobot(QWidget):
+        def __init__(self):
+            super().__init__()
+            self.setWindowTitle("REX")
+            self.setWindowFlags(
+                Qt.WindowType.FramelessWindowHint |
+                Qt.WindowType.Tool |
+                Qt.WindowType.WindowStaysOnTopHint
             )
-        except Exception as exc:
-            print(f"Unable to open REX Assistant: {exc}", file=sys.stderr)
-
-    def mouseReleaseEvent(self, event):
-        if event.button() == Qt.MouseButton.LeftButton:
+            self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
+            self.resize(120, 120)
             self.dragging = False
+            self.offset = QPoint()
+            self.state = RobotState.IDLE
+            self.robot_color = QColor(0, 194, 203)
+            self._animation_angle = 0
+            self._animation_timer = QTimer(self)
+            self._animation_timer.timeout.connect(self._update_animation)
+            self._animation_timer.start(50)
 
-    def mouseMoveEvent(self, event):
-        if self.dragging:
-            new_pos = self.mapToGlobal(event.pos() - self.offset)
-            self.move(new_pos)
+            self._wake_bridge = WakeBridge(self)
+            self._wake_bridge.activated.connect(self._on_wake_activation)
+            self._wake_bridge.error.connect(self._on_wake_error)
+            self._wake_listener = None
+            if LocalWakeWordListener is not None:
+                self._wake_listener = LocalWakeWordListener(
+                    on_activation=lambda command: self._wake_bridge.activated.emit(command),
+                    on_error=lambda message: self._wake_bridge.error.emit(message),
+                    wake_word="hey rex",
+                    language="en-US",
+                )
+                self._wake_listener.start()
 
-    def paintEvent(self, event):
-        painter = QPainter(self)
-        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+        def _update_animation(self):
+            self._animation_angle = (self._animation_angle + 2) % 360
+            self.update()
 
-        # Robot body - dark graphite
-        painter.setBrush(QColor(42, 45, 58))
-        painter.setPen(QColor(74, 80, 112))
-        painter.drawEllipse(10, 10, 100, 100)
+        def set_state(self, state):
+            self.state = state
+            self.update()
 
-        # Robot eyes - state dependent color
-        if self.state == RobotState.LISTENING:
-            eye_color = QColor(0, 255, 100)  # Green
-        elif self.state == RobotState.THINKING:
-            eye_color = QColor(255, 165, 0)  # Orange
-        elif self.state == RobotState.SPEAKING:
-            eye_color = QColor(0, 194, 203)  # Cyan
-        elif self.state == RobotState.ERROR:
-            eye_color = QColor(255, 0, 0)  # Red
-        else:
-            eye_color = self.robot_color
+        def _on_wake_error(self, message):
+            print("[REX Wake Word] " + message, file=sys.stderr)
+            self.set_state(RobotState.OFFLINE)
 
-        painter.setBrush(eye_color)
-        painter.drawEllipse(30, 35, 20, 20)
-        painter.drawEllipse(70, 35, 20, 20)
+        def _on_wake_activation(self, command):
+            self.set_state(RobotState.THINKING)
+            self._launch_assistant(command=command, wake=True)
+            self.set_state(RobotState.IDLE)
 
-        # Animated pupils when thinking
-        if self.state == RobotState.THINKING:
-            import math
-            offset = 3 + math.sin(self._animation_angle * math.pi / 180) * 2
-            pupil_x = 35 + offset
-            pupil_y = 40
+        def _launch_assistant(self, command=None, wake=False):
+            args = [sys.executable, "/opt/rex-os/ui/rex_assistant.py"]
+            if command:
+                args.extend(["--voice-command", command])
+            elif wake:
+                args.append("--wake")
+            try:
+                subprocess.Popen(
+                    args,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            except Exception as exc:
+                print("Unable to open REX Assistant: " + str(exc), file=sys.stderr)
+                self.set_state(RobotState.ERROR)
+
+        def mousePressEvent(self, event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.dragging = True
+                self.offset = event.pos()
+
+        def mouseDoubleClickEvent(self, event):
+            self._launch_assistant()
+
+        def mouseReleaseEvent(self, event):
+            if event.button() == Qt.MouseButton.LeftButton:
+                self.dragging = False
+
+        def mouseMoveEvent(self, event):
+            if self.dragging:
+                self.move(self.mapToGlobal(event.pos() - self.offset))
+
+        def paintEvent(self, event):
+            painter = QPainter(self)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
+            painter.setBrush(QColor(24, 31, 48, 238))
+            painter.setPen(QColor(0, 194, 203))
+            painter.drawEllipse(10, 10, 100, 100)
+
+            if self.state == RobotState.THINKING:
+                eye_color = QColor(255, 183, 77)
+            elif self.state == RobotState.ERROR or self.state == RobotState.OFFLINE:
+                eye_color = QColor(255, 107, 107)
+            else:
+                eye_color = QColor(73, 224, 235)
+            painter.setBrush(eye_color)
+            painter.setPen(Qt.PenStyle.NoPen)
+            painter.drawEllipse(30, 35, 20, 20)
+            painter.drawEllipse(70, 35, 20, 20)
             painter.setBrush(QColor(255, 255, 255))
-            painter.drawEllipse(int(pupil_x), int(pupil_y), 6, 6)
-            painter.drawEllipse(75 - offset, 40, 6, 6)
-        else:
-            # Static pupils
-            painter.setBrush(QColor(255, 255, 255))
-            painter.drawEllipse(35, 40, 8, 8)
-            painter.drawEllipse(67, 40, 8, 8)
+            painter.drawEllipse(36, 41, 8, 8)
+            painter.drawEllipse(76, 41, 8, 8)
+            painter.setPen(QColor(159, 111, 255))
+            painter.drawLine(60, 10, 60, 0)
+            painter.setBrush(QColor(159, 111, 255))
+            painter.drawEllipse(55, 0, 10, 10)
 
-        # Robot antenna
-        painter.setPen(QColor(138, 43, 226))
-        painter.drawLine(60, 10, 60, 0)
-        painter.setBrush(QColor(138, 43, 226))
-        painter.drawEllipse(55, 0, 10, 10)
-
-        # Antenna light state indicator
-        if self.state == RobotState.LISTENING:
-            painter.setBrush(QColor(0, 255, 100))
-        elif self.state == RobotState.THINKING:
-            painter.setBrush(QColor(255, 165, 0))
-        else:
-            painter.setBrush(QColor(138, 43, 226))
-        painter.drawEllipse(55, 0, 8, 8)
+        def closeEvent(self, event):
+            if self._wake_listener:
+                self._wake_listener.stop()
+            event.accept()
 
 
 def main():
-    """Main entry point"""
-    if not PYQT6_AVAILABLE and not TK_AVAILABLE:
-        print("Neither PyQt6 nor Tkinter available for UI")
-        return
-
-    if PYQT6_AVAILABLE:
-        app = QApplication(sys.argv)
-        robot = REXRobot()
-        robot.show()
-        sys.exit(app.exec())
-    else:
-        # Tkinter fallback
-        root = tk.Tk()
-        root.title("REX 🦾")
-        root.geometry("120x120")
-        root.overrideredirect(True)
-        root.attributes("-topmost", True)
-        label = tk.Label(root, text="🤖", font=("Arial", 24))
-        label.pack(expand=True)
-        root.mainloop()
+    if not PYQT6_AVAILABLE:
+        print("REX Robot requires python3-pyqt6.")
+        return 1
+    app = QApplication(sys.argv)
+    robot = REXRobot()
+    robot.show()
+    return app.exec()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
