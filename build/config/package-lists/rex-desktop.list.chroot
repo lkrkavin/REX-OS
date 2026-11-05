@@ -22,3 +22,9 @@ pocketsphinx-en-us
 # Lightweight X11 window enumeration and focus support
 wmctrl
 xdotool
+
+# REX Omni and secure AI provider configuration
+python3-keyring
+flatpak
+policykit-1
+openssh-client
