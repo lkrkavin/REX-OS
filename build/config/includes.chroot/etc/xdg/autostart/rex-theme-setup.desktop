@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=REX Desktop Setup
+Comment=Apply the REX OS desktop layout and wallpaper
+Exec=/usr/bin/plasma-apply-lookandfeel --apply rex --resetLayout
+TryExec=/usr/bin/plasma-apply-lookandfeel
+OnlyShowIn=KDE;
+X-KDE-autostart-phase=1
+X-KDE-StartupNotify=false
+Terminal=false
