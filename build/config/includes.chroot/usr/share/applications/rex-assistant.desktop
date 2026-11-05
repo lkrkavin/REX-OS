@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=REX Assistant
+Comment=Open the REX AI assistant
+Exec=/usr/bin/python3 /opt/rex-os/ui/rex_assistant.py
+Icon=applications-internet
+Terminal=false
+Categories=Utility;
+StartupNotify=true
