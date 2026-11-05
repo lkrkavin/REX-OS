@@ -1,9 +1,8 @@
 #!/usr/bin/env python3
 """Local, offline 'Hey Rex' wake-word listener.
 
-PocketSphinx performs wake-word detection locally. Only after the wake phrase
-is detected do we transcribe the following command (Google Speech Recognition
-when online, PocketSphinx as an offline fallback). Audio is not saved.
+PocketSphinx performs both wake-word detection and command transcription locally.
+Audio is processed in memory and is never uploaded or saved.
 """
 from __future__ import annotations
 
@@ -101,16 +100,12 @@ class LocalWakeWordListener:
                         pass
                     else:
                         try:
-                            command = self._recognizer.recognize_google(
+                            # Keep command audio on-device; no cloud transcription.
+                            command = self._recognizer.recognize_sphinx(
                                 command_audio, language=self.language
                             )
                         except (sr.UnknownValueError, sr.RequestError):
-                            try:
-                                command = self._recognizer.recognize_sphinx(
-                                    command_audio, language=self.language
-                                )
-                            except (sr.UnknownValueError, sr.RequestError):
-                                command = None
+                            command = None
                     if not self._stop_event.is_set():
                         self.on_activation(command.strip() if command else None)
         except Exception as exc:
