@@ -21,3 +21,4 @@ pocketsphinx-en-us
 
 # Lightweight X11 window enumeration and focus support
 wmctrl
+xdotool
