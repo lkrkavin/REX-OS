@@ -71,7 +71,7 @@ class SettingsWindow(QWidget if QT else object):
             import keyring
             if not key:key=keyring.get_password("rex-os","openrouter") or ""
         except Exception as exc:
-            QMessageBox.critical(self,"Keyring unavailable",f"Cannot read the saved API key securely.\\n\\n{exc}")
+            QMessageBox.critical(self,"Keyring unavailable",f"Cannot read the saved API key securely.\n\n{exc}")
             return
         if not key:
             QMessageBox.warning(self,"API key required","Enter your OpenRouter API key, or save it first.")
@@ -89,8 +89,8 @@ class SettingsWindow(QWidget if QT else object):
                     limit=data.get("limit")
                     usage=data.get("usage")
                     detail="OpenRouter accepted the API key."
-                    if limit is not None:detail+=f"\\nKey limit: {limit}"
-                    if usage is not None:detail+=f"\\nUsage: {usage}"
+                    if limit is not None:detail+=f"\nKey limit: {limit}"
+                    if usage is not None:detail+=f"\nUsage: {usage}"
                     QMessageBox.information(self,"Connection successful",detail)
                 else:
                     QMessageBox.warning(self,"Connection failed",f"OpenRouter returned HTTP {response.status}.")

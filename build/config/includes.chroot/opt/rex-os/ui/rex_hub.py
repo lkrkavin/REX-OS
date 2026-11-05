@@ -46,7 +46,6 @@ if QT_AVAILABLE:
                 QLabel { color:#eaf2ff; }
                 QLabel#brand { color:#ffffff; font-size:17px; font-weight:900; letter-spacing:2px; }
                 QLabel#muted { color:#aabbd3; font-size:10px; letter-spacing:1px; }
-                QLabel#clock { color:#edf4ff; font-size:12px; font-weight:650; }
                 QToolButton { color:#eaf4ff; background:transparent; border:1px solid transparent;
                     border-radius:17px; padding:5px; font-size:11px; font-weight:650; }
                 QToolButton:hover { background:rgba(80,112,160,100); border:1px solid rgba(130,220,255,150); }
