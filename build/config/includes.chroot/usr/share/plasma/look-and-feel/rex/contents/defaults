@@ -1,0 +1,6 @@
+[Desktop]
+Containment=org.kde.plasma.folder
+
+[Wallpaper]
+Image=/usr/share/wallpapers/rex/contents/images/REX-OS-wallpaper.png
+FillMode=2
