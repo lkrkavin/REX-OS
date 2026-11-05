@@ -3,6 +3,7 @@ import unittest
 from pathlib import Path
 from services.ecosystem import REXEcosystem, create_default_ecosystem
 from services.desktop_control import DesktopControl
+from services.command_router import DesktopCommandRouter
 
 class TestEcosystem(unittest.TestCase):
     def test_default_modules(self):
@@ -38,6 +39,8 @@ class TestDesktopControl(unittest.TestCase):
         result=DesktopControl().press_key("ENTER")
         self.assertFalse(result.success)
         self.assertIn("approval",result.message.lower())
+    def test_unknown_command_is_left_for_ai(self):
+        self.assertIsNone(DesktopCommandRouter().execute("explain quantum computing"))
     def test_unsafe_key_is_rejected(self):
         result=DesktopControl(lambda *_:True).press_key("CTRL+ALT+DELETE")
         self.assertFalse(result.success)
