@@ -27,6 +27,7 @@ class ProviderType(Enum):
     OPENAI = "openai"
     ANTHROPIC = "anthropic"
     GOOGLE = "google"
+    OPENROUTER = "openrouter"
     HUGGING_FACE = "huggingface"
     NONE = "none"  # Alias for offline mode (backward compatibility)
     OFFLINE = "offline"  # Fallback mode
@@ -378,6 +379,86 @@ class GoogleProvider(AIProvider):
         self.api_key = None
 
 
+
+class OpenRouterProvider(AIProvider):
+    """OpenRouter provider using its OpenAI-compatible chat completions API."""
+    DEFAULT_MODEL = "openai/gpt-4o-mini"
+
+    def __init__(self, config: Optional[ProviderConfig] = None):
+        super().__init__(config)
+        self.base_url = "https://openrouter.ai/api/v1"
+        self.api_key = os.environ.get("OPENROUTER_API_KEY") or self._read_keyring()
+        self.model = os.environ.get("REX_OPENROUTER_MODEL") or self._read_model_preference()
+
+    @staticmethod
+    def _read_keyring():
+        try:
+            import keyring
+            return keyring.get_password("rex-os", "openrouter")
+        except Exception:
+            return None
+
+    @staticmethod
+    def _read_model_preference():
+        try:
+            import json
+            from pathlib import Path
+            path = Path.home() / ".config/rex/ai.json"
+            data = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
+            return data.get("openrouter_model") or OpenRouterProvider.DEFAULT_MODEL
+        except Exception:
+            return OpenRouterProvider.DEFAULT_MODEL
+
+    async def check_availability(self) -> bool:
+        self._available = bool(self.api_key)
+        self._last_error = None if self._available else "OpenRouter API key is not configured in REX Settings"
+        return self._available
+
+    async def generate(self, prompt: str, model: Optional[str] = None,
+                       max_tokens: int = 1000, stream: bool = False) -> str:
+        if not self.api_key:
+            await self.check_availability()
+            raise RuntimeError(self._last_error or "OpenRouter API key is missing")
+        try:
+            import aiohttp
+            timeout = aiohttp.ClientTimeout(total=self.config.timeout)
+            payload = {"model": model or self.model or self.DEFAULT_MODEL,
+                       "messages": [{"role": "user", "content": prompt}],
+                       "max_tokens": max_tokens, "stream": False}
+            headers = {"Authorization": f"Bearer {self.api_key}",
+                       "Content-Type": "application/json",
+                       "HTTP-Referer": "https://github.com/lkrkavin/REX-OS",
+                       "X-Title": "REX OS"}
+            async with aiohttp.ClientSession(timeout=timeout) as session:
+                async with session.post(self.base_url + "/chat/completions",
+                                        json=payload, headers=headers) as resp:
+                    data = await resp.json(content_type=None)
+                    if resp.status != 200:
+                        message = data.get("error", {}).get("message", f"HTTP {resp.status}")
+                        raise RuntimeError("OpenRouter: " + str(message))
+                    choices = data.get("choices") or []
+                    if not choices:
+                        raise RuntimeError("OpenRouter returned no choices")
+                    content = choices[0].get("message", {}).get("content", "")
+                    if isinstance(content, list):
+                        return "".join(part.get("text", "") for part in content if isinstance(part, dict))
+                    return str(content)
+        except Exception as exc:
+            self._last_error = str(exc)
+            raise
+
+    async def list_models(self) -> List[ModelInfo]:
+        return [
+            ModelInfo(name="openai/gpt-4o-mini", provider=ProviderType.OPENROUTER, capabilities=["text-generation"], context_length=128000),
+            ModelInfo(name="anthropic/claude-3.5-sonnet", provider=ProviderType.OPENROUTER, capabilities=["text-generation"], context_length=200000),
+            ModelInfo(name="google/gemini-2.0-flash-001", provider=ProviderType.OPENROUTER, capabilities=["text-generation"], context_length=1000000),
+            ModelInfo(name="deepseek/deepseek-chat", provider=ProviderType.OPENROUTER, capabilities=["text-generation"], context_length=64000),
+        ]
+
+    def shutdown(self):
+        self.api_key = None
+
+
 class LlamaCppProvider(AIProvider):
     """llama.cpp local AI provider"""
 
@@ -538,6 +619,7 @@ def get_available_providers() -> Dict[str, ProviderType]:
         "openai": ProviderType.OPENAI,
         "anthropic": ProviderType.ANTHROPIC,
         "google": ProviderType.GOOGLE,
+        "openrouter": ProviderType.OPENROUTER,
         "huggingface": ProviderType.HUGGING_FACE,
         "offline": ProviderType.OFFLINE,
     }
@@ -555,6 +637,8 @@ def create_provider(provider_type: ProviderType, config: Optional[ProviderConfig
         return AnthropicProvider(config=config)
     elif provider_type == ProviderType.GOOGLE:
         return GoogleProvider(config=config)
+    elif provider_type == ProviderType.OPENROUTER:
+        return OpenRouterProvider(config=config)
     elif provider_type == ProviderType.OFFLINE or provider_type == ProviderType.NONE:
         return OfflineProvider(config=config)
     else:
@@ -563,6 +647,6 @@ def create_provider(provider_type: ProviderType, config: Optional[ProviderConfig
 
 __all__ = [
     "ProviderType", "ModelInfo", "ProviderConfig", "AIProvider",
-    "OllamaProvider", "LlamaCppProvider", "OpenAIProvider", "AnthropicProvider", "GoogleProvider", "OfflineProvider",
+    "OllamaProvider", "LlamaCppProvider", "OpenAIProvider", "AnthropicProvider", "GoogleProvider", "OpenRouterProvider", "OfflineProvider",
     "get_available_providers", "create_provider"
 ]
