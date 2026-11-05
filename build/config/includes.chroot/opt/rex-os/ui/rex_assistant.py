@@ -121,8 +121,8 @@ if PYQT6_AVAILABLE:
             self.initial_command = initial_command
             self.wake_only = wake_only
             self.setWindowTitle("REX AI")
-            self.resize(650, 740)
-            self.setMinimumSize(420, 520)
+            self.resize(820, 780)
+            self.setMinimumSize(560, 620)
             self.setWindowFlags(
                 Qt.WindowType.Window |
                 Qt.WindowType.WindowCloseButtonHint |
@@ -130,22 +130,22 @@ if PYQT6_AVAILABLE:
                 Qt.WindowType.WindowStaysOnTopHint
             )
             self.setStyleSheet("""
-                QMainWindow, QWidget { background:#101522; color:#e8eef8; }
-                QLabel#brand { color:#f4f8ff; font-size:21px; font-weight:700; }
-                QLabel#subtitle { color:#8d9bb3; font-size:11px; }
-                QLabel#status { color:#7ee7ef; background:#192438;
+                QMainWindow, QWidget { background:#0b1020; color:#edf4ff; }
+                QLabel#brand { color:#f5f8ff; font-size:27px; font-weight:800; letter-spacing:1px; }
+                QLabel#subtitle { color:#9aaac4; font-size:10px; letter-spacing:2px; }
+                QLabel#status { color:#8deaff; background:#111e33;
                                 border:1px solid #263b55; border-radius:10px;
                                 padding:8px 12px; }
-                QTextBrowser { background:#121b2a; color:#e8eef8;
-                               border:1px solid #29384e; border-radius:14px;
+                QTextBrowser { background:#0f192b; color:#e8eef8;
+                               border:1px solid #263b58; border-radius:20px;
                                padding:12px; selection-background-color:#315a78; }
-                QLineEdit { background:#192438; color:#ffffff;
-                            border:1px solid #3b6682; border-radius:12px;
+                QLineEdit { background:#142039; color:#ffffff;
+                            border:1px solid #456b91; border-radius:18px;
                             padding:13px; font-size:14px; }
-                QPushButton { background:#126c82; color:#ffffff;
-                              border:0; border-radius:12px;
+                QPushButton { background:#6556c8; color:#ffffff;
+                              border:0; border-radius:17px;
                               padding:12px 20px; font-weight:700; }
-                QPushButton:hover { background:#188aa1; }
+                QPushButton:hover { background:#8272ef; }
                 QPushButton:disabled { background:#394657; color:#9aa6b7; }
                 QCheckBox { color:#b9c8dc; spacing:8px; padding:5px; }
                 QFrame#header { background:#151f30; border:1px solid #263b55;
@@ -162,9 +162,9 @@ if PYQT6_AVAILABLE:
             header.setObjectName("header")
             header_layout = QVBoxLayout(header)
             header_layout.setContentsMargins(16, 13, 16, 13)
-            brand = QLabel("◈  REX AI")
+            brand = QLabel("REX AI  ·  YOUR INTELLIGENT DESKTOP")
             brand.setObjectName("brand")
-            subtitle = QLabel("YOUR DESKTOP INTELLIGENCE")
+            subtitle = QLabel("A NEW KIND OF DESKTOP COMPANION")
             subtitle.setObjectName("subtitle")
             header_layout.addWidget(brand)
             header_layout.addWidget(subtitle)
