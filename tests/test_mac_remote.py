@@ -1,6 +1,8 @@
-import unittest
+import unittest, importlib.util
 from unittest.mock import patch
-from connect.mac_remote import MacRemoteManager
+spec=importlib.util.spec_from_file_location('rex_mac_remote','connect/mac_remote.py')
+module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+MacRemoteManager=module.MacRemoteManager
 
 class TestMacRemoteValidation(unittest.TestCase):
  def test_rejects_shell_like_host(self):
