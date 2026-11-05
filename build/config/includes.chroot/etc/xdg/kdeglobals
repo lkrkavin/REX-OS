@@ -1,11 +1,12 @@
 [General]
 Name=REX OS
+ColorScheme=REX
 
 [Icons]
 Theme=breeze-dark
 
 [KDE]
-LookAndFeelPackage=/usr/share/plasma/look-and-feel/rex
+LookAndFeelPackage=rex
 
 [WM]
 activeBackground=#2a2d3a
