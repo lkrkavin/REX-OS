@@ -32,7 +32,7 @@ class DesktopControl:
                     parser.read(entry, encoding="utf-8")
                     section=parser["Desktop Entry"]
                     if section.get("Type","Application")!="Application" or section.get("NoDisplay","false").lower()=="true": continue
-                    found[entry.stem]={"id":entry.stem,"name":section.get("Name",entry.stem),"icon":section.get("Icon","")}
+                    found[entry.name]={"id":entry.name,"name":section.get("Name",entry.stem),"icon":section.get("Icon","")}
                 except (OSError, KeyError, configparser.Error): continue
         return sorted(found.values(), key=lambda item:item["name"].casefold())
 
