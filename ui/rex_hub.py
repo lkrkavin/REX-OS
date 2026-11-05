@@ -11,6 +11,7 @@ try: from services.ecosystem import create_default_ecosystem
 except ImportError: create_default_ecosystem=None
 
 APP_COMMANDS={"Assistant":[sys.executable,"/opt/rex-os/ui/rex_assistant.py"],
+              "AI Settings":[sys.executable,"/opt/rex-os/ui/rex_ai_settings.py"],
               "Files":["dolphin"],"Terminal":["konsole"],"Settings":["systemsettings"],
               "Browser":["firefox-esr"],"Apps":[sys.executable,"/opt/rex-os/ui/rex_omni.py"],
               "Connect":[sys.executable,"/opt/rex-os/ui/rex_connect.py"]}
@@ -54,9 +55,9 @@ if QT_AVAILABLE:
             self.dock.setWindowFlags(Qt.WindowType.FramelessWindowHint|Qt.WindowType.WindowStaysOnTopHint|Qt.WindowType.Tool)
             self.dock.setStyleSheet(self.styleSheet())
             dockrow=QHBoxLayout(self.dock);dockrow.setContentsMargins(12,8,12,8);dockrow.setSpacing(8)
-            for name in ("✦  REX AI","▦  OMNI","⌁  CONNECT","◫  FILES","⌘  TERMINAL","⚙  SETTINGS"):
+            for name in ("✦  REX AI","◈  AI SETUP","▦  OMNI","⌁  CONNECT","◫  FILES","⌘  TERMINAL","⚙  SETTINGS"):
                 button=QPushButton(name);button.setProperty("dock","true")
-                button.clicked.connect(lambda checked=False,app=name:launch_fixed_app({"✦  REX AI":"Assistant","▦  OMNI":"Apps","⌁  CONNECT":"Connect","◫  FILES":"Files","⌘  TERMINAL":"Terminal","⚙  SETTINGS":"Settings"}[app]))
+                button.clicked.connect(lambda checked=False,app=name:launch_fixed_app({"✦  REX AI":"Assistant","◈  AI SETUP":"AI Settings","▦  OMNI":"Apps","⌁  CONNECT":"Connect","◫  FILES":"Files","⌘  TERMINAL":"Terminal","⚙  SETTINGS":"Settings"}[app]))
                 dockrow.addWidget(button)
             self.dock.adjustSize()
             self.position_windows()
