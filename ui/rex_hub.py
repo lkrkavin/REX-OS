@@ -70,7 +70,7 @@ if QT_AVAILABLE:
         def refresh(self):
             if create_default_ecosystem:
                 data=create_default_ecosystem().health()
-                self.status.setText(f"REX • {data['online']}/{data['total']} MODULES")
+                self.status.setText("REX • " + str(data["total"]) + " MODULES")
             else:self.status.setText("REX • DESKTOP READY")
         def showEvent(self,event):
             super().showEvent(event);self.dock.show()
