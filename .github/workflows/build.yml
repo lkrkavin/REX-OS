@@ -17,6 +17,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      - name: Python syntax and Google Search tests
+        run: |
+          python3 -m compileall -q ais ui
+          python3 -m unittest discover -s tests -p 'test_web_search.py' -v
+
       - name: Free disk space on runner
         run: |
           echo "Freeing disk space..."
