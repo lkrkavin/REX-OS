@@ -1,5 +1,5 @@
 # REX OS graphical desktop packages
-# Explicit package list: live-build reads *.list.chroot files from config/package-lists.
+# KDE Plasma 5 desktop and display manager
 kde-plasma-desktop
 sddm
 xorg
@@ -8,3 +8,8 @@ dolphin
 konsole
 systemsettings
 network-manager
+
+# REX desktop assistant dependencies (Debian Bookworm packages)
+python3-pyqt6
+python3-tk
+python3-psutil
