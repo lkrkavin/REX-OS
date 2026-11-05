@@ -82,6 +82,57 @@ class DesktopControl:
             return ControlResult(result.returncode==0,"focus_window","Window focused." if result.returncode==0 else "Window focus failed.")
         except (OSError,subprocess.TimeoutExpired) as exc:return ControlResult(False,"focus_window",str(exc))
 
+    def _xdotool(self):
+        return shutil.which("xdotool")
+
+    def press_key(self, key):
+        allowed={"ENTER","ESC","TAB","SPACE","CTRL+C","CTRL+V","CTRL+L","ALT+F4","CTRL+SHIFT+ESC"}
+        if not isinstance(key,str) or key.upper() not in allowed:
+            return ControlResult(False,"press_key","Key or shortcut is not in the safe allowlist.")
+        if not self._approved("press_key",key.upper()):
+            return ControlResult(False,"press_key","Keyboard input requires approval.")
+        tool=self._xdotool()
+        if not tool:return ControlResult(False,"press_key","xdotool is not installed.")
+        try:
+            result=subprocess.run([tool,"key",key.lower()],capture_output=True,timeout=3,check=False)
+            return ControlResult(result.returncode==0,"press_key","Key sent." if result.returncode==0 else "Key action failed.")
+        except (OSError,subprocess.TimeoutExpired) as exc:return ControlResult(False,"press_key",str(exc))
+
+    def type_text(self, text):
+        if not isinstance(text,str) or not text or len(text)>1000 or "\\x00" in text:
+            return ControlResult(False,"type_text","Text must be between 1 and 1000 characters.")
+        if not self._approved("type_text","text input"):
+            return ControlResult(False,"type_text","Typing requires approval.")
+        tool=self._xdotool()
+        if not tool:return ControlResult(False,"type_text","xdotool is not installed.")
+        try:
+            result=subprocess.run([tool,"type","--clearmodifiers","--delay","1","--",text],capture_output=True,timeout=10,check=False)
+            return ControlResult(result.returncode==0,"type_text","Text entered." if result.returncode==0 else "Text entry failed.")
+        except (OSError,subprocess.TimeoutExpired) as exc:return ControlResult(False,"type_text",str(exc))
+
+    def click_mouse(self, button=1):
+        if button not in (1,2,3):return ControlResult(False,"click_mouse","Only primary, middle and secondary clicks are allowed.")
+        if not self._approved("click_mouse",str(button)):
+            return ControlResult(False,"click_mouse","Mouse click requires approval.")
+        tool=self._xdotool()
+        if not tool:return ControlResult(False,"click_mouse","xdotool is not installed.")
+        try:
+            result=subprocess.run([tool,"click",str(button)],capture_output=True,timeout=3,check=False)
+            return ControlResult(result.returncode==0,"click_mouse","Click sent." if result.returncode==0 else "Click failed.")
+        except (OSError,subprocess.TimeoutExpired) as exc:return ControlResult(False,"click_mouse",str(exc))
+
+    def move_mouse(self, x, y):
+        if not isinstance(x,int) or not isinstance(y,int) or not (0<=x<=10000 and 0<=y<=10000):
+            return ControlResult(False,"move_mouse","Mouse coordinates are outside the accepted range.")
+        if not self._approved("move_mouse",f"{x},{y}"):
+            return ControlResult(False,"move_mouse","Mouse movement requires approval.")
+        tool=self._xdotool()
+        if not tool:return ControlResult(False,"move_mouse","xdotool is not installed.")
+        try:
+            result=subprocess.run([tool,"mousemove","--sync",str(x),str(y)],capture_output=True,timeout=3,check=False)
+            return ControlResult(result.returncode==0,"move_mouse","Pointer moved." if result.returncode==0 else "Pointer movement failed.")
+        except (OSError,subprocess.TimeoutExpired) as exc:return ControlResult(False,"move_mouse",str(exc))
+
     def terminate_managed_process(self,pid):
         process=self.children.get(pid)
         if process is None or process.poll() is not None:return ControlResult(False,"terminate","REX does not manage this process.")
