@@ -10,7 +10,7 @@ from typing import Optional
 try:
     from PyQt6.QtWidgets import (
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-        QTextBrowser, QLineEdit, QPushButton, QLabel, QCheckBox, QFrame
+        QTextBrowser, QLineEdit, QPushButton, QLabel, QCheckBox, QFrame, QMessageBox
     )
     from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
     PYQT6_AVAILABLE = True
@@ -24,6 +24,12 @@ try:
     AI_AVAILABLE = True
 except ImportError:
     AI_AVAILABLE = False
+
+
+try:
+    from services.command_router import DesktopCommandRouter
+except ImportError:
+    DesktopCommandRouter = None
 
 
 if PYQT6_AVAILABLE:
@@ -190,6 +196,7 @@ if PYQT6_AVAILABLE:
             row.addWidget(self.send_button)
             layout.addLayout(row)
 
+            self.command_router = DesktopCommandRouter() if DesktopCommandRouter else None
             self.worker = AIWorker()
             self.worker.response_ready.connect(self.show_response)
             self.worker.status_ready.connect(self.show_status)
@@ -221,9 +228,23 @@ if PYQT6_AVAILABLE:
                 return
             self.input.clear()
             self.add_message("YOU", message, True)
+            if self.command_router:
+                result = self.command_router.execute(message, self.confirm_desktop_action)
+                if result is not None:
+                    self.add_message("REX", result, False)
+                    return
             self.send_button.setEnabled(False)
             self.send_button.setText("Working…")
             self.worker.send_message(message, self.google_toggle.isChecked())
+
+        def confirm_desktop_action(self, action, target):
+            answer = QMessageBox.question(
+                self, "Allow REX desktop action",
+                f"Allow REX to {action}: {target}?",
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
+            )
+            return answer == QMessageBox.StandardButton.Yes
 
         def show_search_results(self, markup):
             self.chat.append(markup)
