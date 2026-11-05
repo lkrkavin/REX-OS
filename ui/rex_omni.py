@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """REX Omni: discover installed desktop apps and launch them with approval."""
 import sys
+sys.path.insert(0, "/opt/rex-os") if "/opt/rex-os" not in sys.path else None
 try:
     from PyQt6.QtWidgets import QApplication,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,QListWidget,QPushButton,QMessageBox
     QT=True
