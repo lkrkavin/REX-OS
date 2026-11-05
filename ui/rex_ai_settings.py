@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """REX AI provider settings. API keys are stored in the desktop keyring only."""
-import sys, json, os
+import sys, json, os, urllib.request, urllib.error
 from pathlib import Path
 try:
     from PyQt6.QtWidgets import QApplication,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,QComboBox,QPushButton,QMessageBox
@@ -66,7 +66,38 @@ class SettingsWindow(QWidget if QT else object):
         except Exception as exc:
             QMessageBox.critical(self,"Secure storage unavailable",f"Could not save the API key to the desktop keyring. No plaintext fallback was used.\n\n{exc}")
     def test(self):
-        QMessageBox.information(self,"Connection test","Save your key first, then restart REX AI. The provider availability check runs when the assistant starts.")
+        key=self.key.text().strip()
+        try:
+            import keyring
+            if not key:key=keyring.get_password("rex-os","openrouter") or ""
+        except Exception as exc:
+            QMessageBox.critical(self,"Keyring unavailable",f"Cannot read the saved API key securely.\\n\\n{exc}")
+            return
+        if not key:
+            QMessageBox.warning(self,"API key required","Enter your OpenRouter API key, or save it first.")
+            return
+        request=urllib.request.Request(
+            "https://openrouter.ai/api/v1/auth/key",
+            headers={"Authorization":"Bearer "+key,"User-Agent":"REX-OS/0.1.0"},
+            method="GET"
+        )
+        try:
+            with urllib.request.urlopen(request,timeout=12) as response:
+                if response.status==200:
+                    payload=json.loads(response.read().decode("utf-8"))
+                    data=payload.get("data",{})
+                    limit=data.get("limit")
+                    usage=data.get("usage")
+                    detail="OpenRouter accepted the API key."
+                    if limit is not None:detail+=f"\\nKey limit: {limit}"
+                    if usage is not None:detail+=f"\\nUsage: {usage}"
+                    QMessageBox.information(self,"Connection successful",detail)
+                else:
+                    QMessageBox.warning(self,"Connection failed",f"OpenRouter returned HTTP {response.status}.")
+        except urllib.error.HTTPError as exc:
+            QMessageBox.critical(self,"Authentication failed",f"OpenRouter returned HTTP {exc.code}. Check the key and account permissions.")
+        except Exception as exc:
+            QMessageBox.critical(self,"Connection failed",f"Could not reach OpenRouter: {exc}")
 def main():
     if not QT:print("REX AI Settings requires PyQt6.");return 1
     app=QApplication(sys.argv);w=SettingsWindow();w.show();return app.exec()

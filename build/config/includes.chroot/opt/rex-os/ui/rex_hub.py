@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """REX mac-inspired desktop shell: translucent menu bar and floating app dock."""
 import sys, subprocess
-from datetime import datetime
 sys.path.insert(0, "/opt/rex-os")
 try:
     from PyQt6.QtCore import Qt, QTimer
@@ -39,7 +38,7 @@ if QT_AVAILABLE:
             self.setWindowTitle("REX Menu Bar")
             self.setWindowFlags(Qt.WindowType.FramelessWindowHint | Qt.WindowType.WindowStaysOnTopHint | Qt.WindowType.Tool)
             self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-            self.resize(1040, 56)
+            self.resize(900, 56)
             self.setStyleSheet("""
                 QWidget#bar, QWidget#dock { background:rgba(15,20,35,235); border:1px solid rgba(148,177,220,90); }
                 QWidget#bar { border-radius:19px; }
@@ -59,7 +58,6 @@ if QT_AVAILABLE:
             menu = QLabel("  Workspace     Applications     AI     Window     Help"); menu.setObjectName("muted"); row.addWidget(menu)
             row.addStretch(1)
             self.status = QLabel("INITIALISING"); self.status.setObjectName("muted"); row.addWidget(self.status)
-            self.clock = QLabel(); self.clock.setObjectName("clock"); row.addWidget(self.clock)
             root.addWidget(bar)
             self.dock = QWidget(); self.dock.setObjectName("dock")
             self.dock.setWindowTitle("REX Floating Dock")
@@ -79,13 +77,13 @@ if QT_AVAILABLE:
                 dockrow.addWidget(button)
             self.dock.adjustSize()
             self.position_windows()
-            self.timer = QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(1000)
+            self.timer = QTimer(self); self.timer.timeout.connect(self.refresh); self.timer.start(5000)
             self.refresh()
         def position_windows(self):
             screen = QApplication.primaryScreen()
             if screen:
                 area = screen.availableGeometry()
-                self.move(area.x() + (area.width()-self.width())//2, area.y()+8)
+                self.move(area.x()+12, area.y()+8)
                 self.dock.move(area.x() + (area.width()-self.dock.width())//2,
                                area.y()+area.height()-self.dock.height()-18)
         def refresh(self):
@@ -94,7 +92,6 @@ if QT_AVAILABLE:
                 self.status.setText("●  " + str(report.get("registered",0)) + " MODULES REGISTERED")
             else:
                 self.status.setText("●  DESKTOP READY")
-            self.clock.setText(datetime.now().astimezone().strftime("%a  %d %b   %I:%M %p"))
         def showEvent(self, event):
             super().showEvent(event); self.dock.show()
         def closeEvent(self, event):
