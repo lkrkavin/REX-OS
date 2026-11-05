@@ -11,7 +11,7 @@ try:
         QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
         QTextBrowser, QLineEdit, QPushButton, QLabel, QCheckBox, QFrame
     )
-    from PyQt6.QtCore import Qt, QThread, pyqtSignal
+    from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer
     PYQT6_AVAILABLE = True
 except ImportError:
     PYQT6_AVAILABLE = False
@@ -47,8 +47,6 @@ if PYQT6_AVAILABLE:
                 core = REXAICore()
                 self.manager = ConversationManager(ai_core=core)
                 self.loop.run_until_complete(self.manager.initialize())
-                # ConversationManager.initialize() currently returns True even
-                # when no model is connected; report the actual provider state.
                 available = core.is_available
                 provider = core.current_provider.value if core.current_provider else "No provider"
                 self.status_ready.emit(provider, available)
@@ -75,8 +73,7 @@ if PYQT6_AVAILABLE:
             )
             def completed(task):
                 try:
-                    answer = task.result()
-                    self.response_ready.emit(answer or "No response received.")
+                    self.response_ready.emit(task.result() or "No response received.")
                 except Exception as exc:
                     self.response_ready.emit("Request failed: " + str(exc))
             future.add_done_callback(completed)
@@ -112,8 +109,10 @@ if PYQT6_AVAILABLE:
 
 
     class AssistantWindow(QMainWindow):
-        def __init__(self):
+        def __init__(self, initial_command=None, wake_only=False):
             super().__init__()
+            self.initial_command = initial_command
+            self.wake_only = wake_only
             self.setWindowTitle("REX AI")
             self.resize(650, 740)
             self.setMinimumSize(420, 520)
@@ -196,6 +195,7 @@ if PYQT6_AVAILABLE:
             self.worker.search_ready.connect(self.show_search_results)
             self.worker.start()
             self.add_message("REX", "Hello! I'm REX. Ask me something, or let me search Google and bring sources into our conversation.", False)
+            QTimer.singleShot(1200, self.process_initial_request)
 
         def add_message(self, sender, message, user):
             safe = html.escape(message).replace("\n", "<br>")
@@ -205,6 +205,14 @@ if PYQT6_AVAILABLE:
                 f'border-radius:12px;"><b style="color:#62d8e5">{html.escape(sender)}</b>'
                 f'<br><span>{safe}</span></div>'
             )
+
+        def process_initial_request(self):
+            if self.initial_command:
+                self.input.setText(self.initial_command)
+                self.send_message()
+            elif self.wake_only:
+                self.add_message("REX", "I heard you. What can I do for you?", False)
+                self.input.setFocus()
 
         def send_message(self):
             message = self.input.text().strip()
@@ -243,8 +251,14 @@ def main():
     if not PYQT6_AVAILABLE:
         print("REX Assistant requires python3-pyqt6.")
         return 1
+    initial_command = None
+    wake_only = "--wake" in sys.argv[1:]
+    if "--voice-command" in sys.argv[1:]:
+        index = sys.argv.index("--voice-command")
+        if index + 1 < len(sys.argv):
+            initial_command = sys.argv[index + 1]
     app = QApplication(sys.argv)
-    window = AssistantWindow()
+    window = AssistantWindow(initial_command=initial_command, wake_only=wake_only)
     window.show()
     return app.exec()
 
