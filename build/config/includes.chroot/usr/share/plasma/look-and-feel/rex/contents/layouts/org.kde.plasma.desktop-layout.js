@@ -11,7 +11,7 @@ for (var i = 0; i < existingPanels.length; i++) {
 }
 
 // REX top-left launcher.
-var topLeft = new plasma.Panel;
+var topLeft = new Panel;
 topLeft.location = "top";
 topLeft.height = 42;
 topLeft.length = 190;
@@ -19,7 +19,7 @@ topLeft.alignment = "left";
 topLeft.addWidget("org.kde.plasma.kickoff");
 
 // REX top-right system status and clock.
-var topRight = new plasma.Panel;
+var topRight = new Panel;
 topRight.location = "top";
 topRight.height = 42;
 topRight.length = 270;
@@ -28,7 +28,7 @@ topRight.addWidget("org.kde.plasma.systemtray");
 topRight.addWidget("org.kde.plasma.digitalclock");
 
 // Centered floating application dock.
-var dock = new plasma.Panel;
+var dock = new Panel;
 dock.location = "floating";
 dock.height = 58;
 dock.length = 560;
