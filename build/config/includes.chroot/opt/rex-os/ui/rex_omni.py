@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """REX Omni application centre: installed apps, repository search and platform support."""
-import sys, subprocess, re, shutil
+import sys, subprocess, re, shutil, os, stat
+from pathlib import Path
 sys.path.insert(0,"/opt/rex-os")
 try:
  from PyQt6.QtWidgets import (QApplication,QWidget,QVBoxLayout,QHBoxLayout,QLabel,QLineEdit,
-  QListWidget,QListWidgetItem,QPushButton,QMessageBox,QTabWidget,QComboBox,QProgressBar)
+  QListWidget,QListWidgetItem,QPushButton,QMessageBox,QTabWidget,QComboBox,QProgressBar,QFileDialog)
  from PyQt6.QtCore import Qt
  QT=True
 except ImportError: QT=False
@@ -37,7 +38,7 @@ if QT:
    root=QVBoxLayout(self);title=QLabel("REX OMNI");title.setObjectName("title");root.addWidget(title)
    hint=QLabel("One place to discover, install and manage applications");hint.setObjectName("muted");root.addWidget(hint)
    self.tabs=QTabWidget();root.addWidget(self.tabs)
-   self._build_store();self._build_installed();self._build_platforms()
+   self._build_store();self._build_installed();self._build_platforms();self._build_compatibility()
   def _build_store(self):
    page=QWidget();layout=QVBoxLayout(page)
    row=QHBoxLayout();self.search=QLineEdit();self.search.setPlaceholderText("Search Debian packages or enter a Flatpak application ID…")
@@ -64,6 +65,70 @@ if QT:
    self.platforms=QListWidget();layout.addWidget(self.platforms,1)
    btn=QPushButton("Detect available platforms");btn.clicked.connect(self.refresh_platforms);layout.addWidget(btn)
    self.tabs.addTab(page,"Platforms");self.refresh_platforms()
+  def _build_compatibility(self):
+   page=QWidget();layout=QVBoxLayout(page)
+   note=QLabel("Bring your own trusted installer files. REX never silently executes an imported app. Compatibility depends on the application and system.")
+   note.setWordWrap(True);note.setObjectName("muted");layout.addWidget(note)
+   appimage=QPushButton("Import AppImage from this computer");appimage.clicked.connect(self.import_appimage);layout.addWidget(appimage)
+   launch=QPushButton("Launch installed AppImage");launch.clicked.connect(self.launch_appimage);layout.addWidget(launch)
+   windows=QPushButton("Open Windows installer (.exe) with Wine");windows.clicked.connect(self.launch_windows_installer);layout.addWidget(windows)
+   bottles=QPushButton("Install Bottles (Windows app manager)");bottles.clicked.connect(self.install_bottles);layout.addWidget(bottles)
+   waydroid=QPushButton("Android / Waydroid setup information");waydroid.clicked.connect(self.show_waydroid_info);layout.addWidget(waydroid)
+   layout.addStretch();self.tabs.addTab(page,"Compatibility")
+  def import_appimage(self):
+   source,_=QFileDialog.getOpenFileName(self,"Choose AppImage",str(Path.home()),"AppImage (*.AppImage *.appimage)")
+   if not source:return
+   src=Path(source)
+   if not src.is_file() or src.suffix.lower()!=".appimage":
+    self._message("Invalid file","Choose a local .AppImage file.",True);return
+   target_dir=Path.home()/"Applications"
+   try:
+    target_dir.mkdir(mode=0o755,parents=True,exist_ok=True)
+    target=target_dir/src.name
+    if target.exists():
+     self._message("Already exists",f"{target} already exists. Remove or rename it before importing.",True);return
+    shutil.copy2(src,target)
+    target.chmod(target.stat().st_mode|stat.S_IXUSR|stat.S_IXGRP|stat.S_IXOTH)
+    self._message("AppImage imported",f"Imported to {target}. It has not been executed.")
+   except OSError as exc:self._message("Import failed",str(exc),True)
+  def launch_appimage(self):
+   directory=Path.home()/"Applications"
+   source,_=QFileDialog.getOpenFileName(self,"Choose installed AppImage",str(directory),"AppImage (*.AppImage *.appimage)")
+   if not source:return
+   path=Path(source).resolve()
+   try:
+    if path.parent!=directory.resolve() or not path.is_file() or path.suffix.lower()!=".appimage":
+     self._message("Invalid location","Choose an AppImage inside ~/Applications.",True);return
+    if QMessageBox.question(self,"Run AppImage",f"Run {path.name}? Only run software you trust.")!=QMessageBox.StandardButton.Yes:return
+    subprocess.Popen([str(path)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+   except OSError as exc:self._message("Launch failed",str(exc),True)
+  def launch_windows_installer(self):
+   if not shutil.which("wine"):
+    self._message("Wine unavailable","Wine is not installed. Install Wine from REX Omni's APT search first.",True);return
+   source,_=QFileDialog.getOpenFileName(self,"Choose Windows installer",str(Path.home()),"Windows programs (*.exe)")
+   if not source:return
+   path=Path(source).resolve()
+   if not path.is_file() or path.suffix.lower()!=".exe":
+    self._message("Invalid file","Choose a local .exe file.",True);return
+   if QMessageBox.question(self,"Run with Wine",f"Run {path.name} using Wine? Only run software you trust.")!=QMessageBox.StandardButton.Yes:return
+   try:subprocess.Popen(["wine",str(path)],stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,start_new_session=True)
+   except OSError as exc:self._message("Wine launch failed",str(exc),True)
+  def install_bottles(self):
+   if not shutil.which("flatpak"):
+    self._message("Flatpak unavailable","Flatpak is required to install Bottles.",True);return
+   if QMessageBox.question(self,"Install Bottles","Install Bottles from Flathub? This downloads a Windows-app compatibility manager.")!=QMessageBox.StandardButton.Yes:return
+   remotes=run(["flatpak","remotes","--user","--columns=name"],20)
+   if not remotes or "flathub" not in remotes.stdout.split():
+    add=run(["flatpak","remote-add","--user","--if-not-exists","flathub","https://dl.flathub.org/repo/flathub.flatpakrepo"],90)
+    if not add or add.returncode!=0:self._message("Flathub setup failed",add.stderr if add else "Command failed",True);return
+   result=run(["flatpak","install","--user","--assumeyes","flathub","com.usebottles.bottles"],900)
+   if result and result.returncode==0:self._message("Bottles installed","Bottles was installed for this user.")
+   else:self._message("Bottles installation failed",(result.stderr if result else "Command failed")[-2500:],True)
+  def show_waydroid_info(self):
+   available=shutil.which("waydroid") is not None
+   text=("Waydroid is detected. Android app support still depends on a compatible kernel, graphics session and initialized Android image." if available else
+    "Waydroid is not installed. Android app support needs a compatible Linux kernel/session and a separate Waydroid setup. REX will not pretend Android APKs install natively through APT.")
+   self._message("Android compatibility",text)
   def _message(self,title,text,error=False):
    (QMessageBox.critical if error else QMessageBox.information)(self,title,text)
   def search_apps(self):

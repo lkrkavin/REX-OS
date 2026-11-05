@@ -30,3 +30,9 @@ policykit-1
 openssh-client
 
 gnome-keyring
+
+# Browser, Windows compatibility and AppImage runtime support
+firefox-esr
+wine
+winetricks
+libfuse2
