@@ -1,0 +1,10 @@
+# REX OS graphical desktop packages
+# Explicit package list: live-build reads *.list.chroot files from config/package-lists.
+kde-plasma-desktop
+sddm
+xorg
+plasma-nm
+dolphin
+konsole
+systemsettings
+network-manager
