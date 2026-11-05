@@ -15,7 +15,6 @@ python3-tk
 python3-psutil
 
 # Local offline Hey Rex wake-word support
-python3-speechrecognition
 python3-pyaudio
 python3-pocketsphinx
 pocketsphinx-en-us
