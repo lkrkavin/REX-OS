@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """REX desktop shell: compact top panel plus a separate floating application dock."""
-import sys,subprocess
+import sys,subprocess\nsys.path.insert(0, "/opt/rex-os") if "/opt/rex-os" not in sys.path else None
 try:
     from PyQt6.QtCore import Qt,QTimer
     from PyQt6.QtWidgets import QApplication,QWidget,QHBoxLayout,QVBoxLayout,QLabel,QPushButton,QFrame
