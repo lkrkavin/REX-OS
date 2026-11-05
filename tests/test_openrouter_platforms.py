@@ -26,7 +26,8 @@ class TestPlatformSupport(unittest.TestCase):
         self.assertEqual(names,{"Linux","Windows","Android","macOS"})
     def test_macos_is_not_reported_as_native(self):
         mac=next(x for x in PlatformSupport().detect() if x.platform=="macOS")
-        self.assertIn(mac.mode,{"remote-device","unavailable"})
+        self.assertEqual(mac.mode,"remote-supported")
+        self.assertFalse(mac.available)
 
 if __name__=="__main__":
     unittest.main()
