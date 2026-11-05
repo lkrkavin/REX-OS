@@ -19,7 +19,9 @@ jobs:
 
       - name: Python syntax and Google Search tests
         run: |
-          python3 -m compileall -q ais ui build/config/includes.chroot/opt/rex-os/ais build/config/includes.chroot/opt/rex-os/ui
+          python3 -m compileall -q ais ui services connect omni build/config/includes.chroot/opt/rex-os/ais build/config/includes.chroot/opt/rex-os/ui build/config/includes.chroot/opt/rex-os/services
+          python3 -m unittest discover -s tests -p 'test_build57_foundation.py' -v
+          python3 -m unittest discover -s tests -p 'test_web_search.py' -v
           python3 -m unittest discover -s tests -p 'test_web_search.py' -v
           python3 -m unittest discover -s tests -p 'test_wake_word.py' -v
 
