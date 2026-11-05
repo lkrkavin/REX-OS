@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=REX Desktop Hub
+Comment=Unified REX desktop panel
+Exec=/usr/bin/python3 /opt/rex-os/ui/rex_hub.py
+Icon=preferences-desktop
+Terminal=false
+X-GNOME-Autostart-enabled=true
