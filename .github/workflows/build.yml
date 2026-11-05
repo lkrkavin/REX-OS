@@ -27,6 +27,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_build57_foundation.py' -v
           python3 -m unittest discover -s tests -p 'test_web_search.py' -v
           python3 -m unittest discover -s tests -p 'test_wake_word.py' -v
+          python3 -m unittest discover -s tests -p 'test_openrouter_platforms.py' -v
 
       - name: Free disk space on runner
         run: |
