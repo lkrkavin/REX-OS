@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration" ]
     tags:
       - 'v*'
   pull_request:
@@ -28,18 +28,10 @@ jobs:
           mkdir -p build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui
           cp -a vendor/jarvis-upstream/dist/. build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui/
 
-      - name: Python syntax and Google Search tests
+      - name: Python syntax and full test suite
         run: |
           python3 -m compileall -q ais ui services connect omni build/config/includes.chroot/opt/rex-os/ais build/config/includes.chroot/opt/rex-os/ui build/config/includes.chroot/opt/rex-os/services build/config/includes.chroot/opt/rex-os/connect build/config/includes.chroot/opt/rex-os/omni
-          python3 -m unittest discover -s tests -p 'test_rex_desktop_contract.py' -v
-          python3 -m unittest discover -s tests -p 'test_build57_foundation.py' -v
-          python3 -m unittest discover -s tests -p 'test_web_search.py' -v
-          python3 -m unittest discover -s tests -p 'test_wake_word.py' -v
-          python3 -m unittest discover -s tests -p 'test_openrouter_platforms.py' -v
-          python3 -m unittest discover -s tests -p 'test_rex_automation_sync.py' -v
-          python3 -m unittest discover -s tests -p 'test_mac_remote.py' -v
-          python3 -m unittest discover -s tests -p 'test_device_registry_security.py' -v
-          python3 -m unittest discover -s tests -p 'test_pairing_security.py' -v
+          python3 -m unittest discover -s tests -v
 
       - name: Free disk space on runner
         run: |
