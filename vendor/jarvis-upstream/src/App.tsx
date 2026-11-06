@@ -156,7 +156,7 @@ export default function App() {
             // clear the readout while a slow tool was still running.
             store.getState().setActiveTool(null)
             music.working(false)
-            store.getState().pushTurn({ id: turnId, role: 'rex', text: '' })
+            store.getState().pushTurn({ id: turnId, role: 'jarvis', text: '' })
           }
           store.getState().appendToLastTurn(delta)
           spk.push(delta)
