@@ -32,7 +32,7 @@ export async function ask(prompt:string,history:Msg[],handlers:AskHandlers):Prom
  if(!text)throw new Error('REX received an empty response from its AI provider.')
  setConnected(true);handlers.onText(text);return {text,tools:[]}
 }
-export async function warm():Promise<void>{try{const r=await fetch('/api/health',{cache:'no-store'});setConnected(r.ok)}catch{setConnected(false)}}
+export async function warm():Promise<void>{try{const r=await fetch('/api/health',{cache:'no-store'});const data=await r.json() as {configured?:boolean};setConnected(r.ok&&data.configured===true)}catch{setConnected(false)}}
 export function interrupt():void{active?.abort();active=null}
 export function cancel():void{interrupt()}
 export function isConnected():boolean{return connected}

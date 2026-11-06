@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """Local-only REX holographic assistant web app backed by the OS OpenRouter keyring."""
-import argparse, asyncio, json, mimetypes, sys, threading, webbrowser
+import argparse, asyncio, json, mimetypes, shutil, subprocess, sys, threading, webbrowser
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from urllib.parse import unquote, urlsplit
@@ -75,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     parser=argparse.ArgumentParser(); parser.add_argument("--launch",action="store_true")
     args=parser.parse_args(); server=ThreadingHTTPServer((HOST,PORT),Handler); server.daemon_threads=True
-    if args.launch: threading.Timer(1.0,lambda:webbrowser.open(ORIGIN)).start()
+    if args.launch:\n        def launch_ui():\n            if shutil.which("chromium"):\n                subprocess.Popen(["chromium", "--app=" + ORIGIN], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n            else:\n                webbrowser.open(ORIGIN)\n        threading.Timer(1.0, launch_ui).start()
     print(f"REX assistant listening on {ORIGIN}",flush=True)
     try: server.serve_forever()
     except KeyboardInterrupt: pass
