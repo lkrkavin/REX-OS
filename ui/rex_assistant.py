@@ -7,6 +7,7 @@ import asyncio
 import html
 import shutil
 import subprocess
+import threading
 from typing import Optional
 
 try:
@@ -149,6 +150,40 @@ if PYQT6_AVAILABLE:
                 self.failed.emit("Microphone unavailable: " + str(exc))
 
 
+    class WakeWordWorker(QThread):
+        activated = pyqtSignal(str)
+        failed = pyqtSignal(str)
+
+        def __init__(self, parent=None):
+            super().__init__(parent)
+            self._stop_event = threading.Event()
+            self._listener = None
+
+        def run(self):
+            try:
+                from ais.wake_word import LocalWakeWordListener
+                self._listener = LocalWakeWordListener(
+                    on_activation=lambda command: self.activated.emit(command or ""),
+                    on_error=self.failed.emit,
+                )
+                if not self._listener.start():
+                    self.failed.emit("Hey Rex is unavailable. Check microphone and offline speech packages.")
+                    return
+                while not self._stop_event.wait(0.2):
+                    if not self._listener.running:
+                        break
+            except Exception as exc:
+                self.failed.emit("Hey Rex listener error: " + str(exc))
+            finally:
+                if self._listener:
+                    self._listener.stop()
+
+        def stop(self):
+            self._stop_event.set()
+            if self._listener:
+                self._listener.stop()
+
+
     class AssistantWindow(QMainWindow):
         def __init__(self, initial_command=None, wake_only=False):
             super().__init__()
@@ -234,6 +269,13 @@ if PYQT6_AVAILABLE:
             row.addWidget(self.send_button)
             layout.addLayout(row)
 
+            self.wake_toggle = QCheckBox("Enable Hey Rex hands-free listening (processed locally)")
+            self.wake_toggle.setChecked(False)
+            self.wake_toggle.setToolTip("When enabled, the microphone listens locally for Hey Rex. Audio is not uploaded or saved.")
+            layout.addWidget(self.wake_toggle)
+            self.wake_worker = None
+            self.wake_toggle.toggled.connect(self.toggle_wake_word)
+
             self.speak_toggle = QCheckBox("Speak REX replies aloud")
             self.speak_toggle.setChecked(True)
             self.speak_toggle.setToolTip("Uses the installed local espeak-ng voice")
@@ -267,6 +309,38 @@ if PYQT6_AVAILABLE:
                 self.add_message("REX", greeting, False)
                 self.speak_response(greeting)
                 self.input.setFocus()
+
+        def toggle_wake_word(self, enabled):
+            if enabled:
+                if self.wake_worker and self.wake_worker.isRunning():
+                    return
+                self.wake_worker = WakeWordWorker(self)
+                self.wake_worker.activated.connect(self.on_wake_activation)
+                self.wake_worker.failed.connect(self.on_voice_error)
+                self.wake_worker.finished.connect(self.on_wake_finished)
+                self.wake_worker.start()
+                self.add_message("VOICE", "Hey Rex is listening locally. Say “Hey Rex” followed by a command.", False)
+            elif self.wake_worker:
+                self.wake_worker.stop()
+                self.wake_worker.wait(5000)
+                self.wake_worker = None
+                self.add_message("VOICE", "Hey Rex listening is off.", False)
+
+        def on_wake_activation(self, command):
+            if command.strip():
+                self.input.setText(command.strip())
+                self.send_message()
+            else:
+                greeting = "I heard Hey Rex. What can I do for you?"
+                self.add_message("REX", greeting, False)
+                self.speak_response(greeting)
+
+        def on_wake_finished(self):
+            if self.wake_toggle.isChecked():
+                self.wake_toggle.blockSignals(True)
+                self.wake_toggle.setChecked(False)
+                self.wake_toggle.blockSignals(False)
+            self.wake_worker = None
 
         def start_voice_capture(self):
             if self.voice_worker and self.voice_worker.isRunning():
@@ -359,6 +433,9 @@ if PYQT6_AVAILABLE:
             self.worker.wait(3000)
             if self.voice_worker and self.voice_worker.isRunning():
                 self.voice_worker.wait(3000)
+            if self.wake_worker and self.wake_worker.isRunning():
+                self.wake_worker.stop()
+                self.wake_worker.wait(5000)
             event.accept()
 
 
