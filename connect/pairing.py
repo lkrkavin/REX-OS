@@ -11,7 +11,10 @@ import hashlib
 import hmac
 import secrets
 import time
-import qrcode
+try:
+    import qrcode
+except ImportError:  # QR image generation is optional; numeric pairing remains available.
+    qrcode = None
 import io
 import base64
 from dataclasses import dataclass, field
@@ -133,6 +136,8 @@ class PairingManager:
 
     def generate_qr_code(self, qr_data: str) -> str:
         """Generate QR code as base64 PNG"""
+        if qrcode is None:
+            return ""
         try:
             qr = qrcode.QRCode(
                 version=1,
