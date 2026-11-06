@@ -36,6 +36,17 @@ class TestREXDesktopContract(unittest.TestCase):
             self.assertIn("\n"+package+"\n",packages)
         pip_hook=(ROOT/"build/config/hooks/normal/03-install-pip-deps.hook.chroot").read_text()
         self.assertIn("SpeechRecognition",pip_hook)
+    def test_continuous_hey_rex_listener_is_integrated_and_opt_in(self):
+        source=(ROOT/"ui/rex_assistant.py").read_text()
+        mirror=(ROOT/"build/config/includes.chroot/opt/rex-os/ui/rex_assistant.py").read_text()
+        self.assertEqual(source,mirror)
+        for feature in ("class WakeWordWorker","LocalWakeWordListener",
+                        "Enable Hey Rex hands-free listening","def toggle_wake_word",
+                        "def on_wake_activation","def on_wake_finished"):
+            self.assertIn(feature,source)
+        self.assertIn("self.wake_toggle.setChecked(False)",source)
+        self.assertIn("self.wake_worker.stop()",source)
+
     def test_openrouter_connection_button_performs_authenticated_check(self):
         source=(ROOT/"ui/rex_ai_settings.py").read_text()
         self.assertIn("/api/v1/auth/key",source)
