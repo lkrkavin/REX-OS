@@ -463,11 +463,6 @@ export default function App() {
     })
     const warming = warm().catch((err: Error) => s.setError(err.message))
 
-    if (false) {
-      s.setError(
-        'REX local OpenRouter service is not available.',
-      )
-    }
 
     // Pull the neural voice down during the boot sequence so the first
     // "Hey Jarvis" isn't waiting on an 86MB download. Deliberately not awaited
