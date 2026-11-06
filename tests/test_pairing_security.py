@@ -14,6 +14,7 @@ class TestPairingSecurity(unittest.TestCase):
             manager = PairingManager(registry)
             started = asyncio.run(manager.initiate_pairing(DeviceType.ANDROID_PHONE, "Test Phone"))
             session = manager.get_session(started.session_id)
+            asyncio.run(manager.confirm_pairing_local(started.session_id))
             result = asyncio.run(manager.confirm_pairing(started.session_id, session.pairing_code))
             self.assertTrue(result.success)
             self.assertTrue(result.auth_token)
@@ -26,6 +27,7 @@ class TestPairingSecurity(unittest.TestCase):
             registry = DeviceRegistry(str(Path(directory) / "devices.json"))
             manager = PairingManager(registry)
             started = asyncio.run(manager.initiate_pairing(DeviceType.ANDROID_PHONE, "Test Phone"))
+            asyncio.run(manager.confirm_pairing_local(started.session_id))
             for _ in range(manager.MAX_CODE_ATTEMPTS):
                 result = asyncio.run(manager.confirm_pairing(started.session_id, "wrong-code"))
             self.assertFalse(result.success)
