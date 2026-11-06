@@ -8,6 +8,7 @@ Implements secure pairing with confirmation on both devices.
 
 import asyncio
 import hashlib
+import hmac
 import secrets
 import time
 import qrcode
@@ -41,6 +42,7 @@ class PairingSession:
     created_at: float
     expires_at: float
     confirmed: bool = False
+    failed_attempts: int = 0
     device_info: Optional[Dict[str, Any]] = None
     callback: Optional[Callable] = None
 
@@ -53,6 +55,7 @@ class PairingResult:
     message: str = ""
     session_id: Optional[str] = None
     error: Optional[str] = None
+    auth_token: Optional[str] = None  # Returned once to the newly paired device.
 
 
 class PairingManager:
@@ -63,6 +66,7 @@ class PairingManager:
 
     PAIRING_TIMEOUT = 300  # 5 minutes
     PAIRING_CODE_LENGTH = 6
+    MAX_CODE_ATTEMPTS = 5
     SESSION_CLEANUP_INTERVAL = 60
 
     def __init__(self, registry: DeviceRegistry = None):
@@ -216,11 +220,16 @@ class PairingManager:
                 error="SESSION_EXPIRED"
             )
 
-        if session.pairing_code != pairing_code:
+        if not isinstance(pairing_code, str) or not hmac.compare_digest(session.pairing_code, pairing_code):
+            with self._lock:
+                session.failed_attempts += 1
+                exhausted = session.failed_attempts >= self.MAX_CODE_ATTEMPTS
+                if exhausted:
+                    self._active_sessions.pop(session_id, None)
             return PairingResult(
                 success=False,
-                message="Invalid pairing code",
-                error="INVALID_CODE"
+                message="Pairing code attempt limit reached; start a new pairing session." if exhausted else "Invalid pairing code",
+                error="TOO_MANY_ATTEMPTS" if exhausted else "INVALID_CODE"
             )
 
         # Create device entry
@@ -252,7 +261,8 @@ class PairingManager:
             success=True,
             device_id=device_id,
             message=f"Successfully paired with {session.device_name}",
-            session_id=session_id
+            session_id=session_id,
+            auth_token=auth_token
         )
 
     async def confirm_pairing_local(self, session_id: str) -> PairingResult:
