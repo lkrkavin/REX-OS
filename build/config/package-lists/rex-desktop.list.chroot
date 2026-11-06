@@ -35,6 +35,9 @@ openssh-client
 
 gnome-keyring
 
+# Chromium browser for the REX voice interface
+chromium
+
 # Browser, Windows compatibility and AppImage runtime support
 firefox-esr
 wine
