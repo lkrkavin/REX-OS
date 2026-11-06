@@ -23,6 +23,17 @@ class TestREXDesktopContract(unittest.TestCase):
         for feature in ("import_appimage","launch_appimage","launch_windows_installer","install_bottles","show_waydroid_info"):
             self.assertIn("def "+feature,source)
         self.assertIn('subprocess.Popen(["wine",str(path)]',source)
+    def test_voice_assistant_is_connected_to_desktop_and_iso(self):
+        source=(ROOT/"ui/rex_assistant.py").read_text()
+        mirror=(ROOT/"build/config/includes.chroot/opt/rex-os/ui/rex_assistant.py").read_text()
+        self.assertEqual(source,mirror)
+        for feature in ("class VoiceCaptureWorker","recognize_sphinx","def start_voice_capture",
+                        "def speak_response","espeak-ng","Speak REX replies aloud"):
+            self.assertIn(feature,source)
+        packages=(ROOT/"build/config/package-lists/rex-desktop.list.chroot").read_text()
+        for package in ("python3-speechrecognition","python3-pyaudio",
+                        "python3-pocketsphinx","pocketsphinx-en-us","espeak-ng"):
+            self.assertIn("\n"+package+"\n",packages)
     def test_openrouter_connection_button_performs_authenticated_check(self):
         source=(ROOT/"ui/rex_ai_settings.py").read_text()
         self.assertIn("/api/v1/auth/key",source)

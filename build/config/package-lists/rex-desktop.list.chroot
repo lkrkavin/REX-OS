@@ -14,10 +14,14 @@ python3-pyqt6
 python3-tk
 python3-psutil
 
-# Local offline Hey Rex wake-word support
+# Local offline Hey Rex wake-word and push-to-talk support
+python3-speechrecognition
 python3-pyaudio
 python3-pocketsphinx
 pocketsphinx-en-us
+
+# Local spoken responses (English voice)
+espeak-ng
 
 # Lightweight X11 window enumeration and focus support
 wmctrl

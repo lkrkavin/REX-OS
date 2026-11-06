@@ -5,6 +5,8 @@ import sys
 sys.path.insert(0, "/opt/rex-os")
 import asyncio
 import html
+import shutil
+import subprocess
 from typing import Optional
 
 try:
@@ -114,6 +116,38 @@ if PYQT6_AVAILABLE:
             if self.loop and self.loop.is_running():
                 self.loop.call_soon_threadsafe(self.loop.stop)
 
+    class VoiceCaptureWorker(QThread):
+        recognized = pyqtSignal(str)
+        failed = pyqtSignal(str)
+
+        def run(self):
+            try:
+                import speech_recognition as sr
+            except ImportError:
+                self.failed.emit("Offline speech recognition is not installed.")
+                return
+            try:
+                recognizer = sr.Recognizer()
+                with sr.Microphone() as source:
+                    recognizer.adjust_for_ambient_noise(source, duration=0.5)
+                    audio = recognizer.listen(source, timeout=5.0, phrase_time_limit=8.0)
+                try:
+                    text = recognizer.recognize_sphinx(audio)
+                except sr.UnknownValueError:
+                    self.failed.emit("Speech not understood. Please try again.")
+                    return
+                except sr.RequestError as exc:
+                    self.failed.emit("Offline speech engine error: " + str(exc))
+                    return
+                if text.strip():
+                    self.recognized.emit(text.strip())
+                else:
+                    self.failed.emit("No speech was detected.")
+            except sr.WaitTimeoutError:
+                self.failed.emit("No speech heard. Press the microphone and try again.")
+            except Exception as exc:
+                self.failed.emit("Microphone unavailable: " + str(exc))
+
 
     class AssistantWindow(QMainWindow):
         def __init__(self, initial_command=None, wake_only=False):
@@ -191,10 +225,20 @@ if PYQT6_AVAILABLE:
             self.input.setPlaceholderText("Ask REX anything…")
             self.input.returnPressed.connect(self.send_message)
             row.addWidget(self.input, 1)
+            self.voice_button = QPushButton("🎙 Speak")
+            self.voice_button.setToolTip("Record one offline voice command")
+            self.voice_button.clicked.connect(self.start_voice_capture)
+            row.addWidget(self.voice_button)
             self.send_button = QPushButton("Send  ➤")
             self.send_button.clicked.connect(self.send_message)
             row.addWidget(self.send_button)
             layout.addLayout(row)
+
+            self.speak_toggle = QCheckBox("Speak REX replies aloud")
+            self.speak_toggle.setChecked(True)
+            self.speak_toggle.setToolTip("Uses the installed local espeak-ng voice")
+            layout.addWidget(self.speak_toggle)
+            self.voice_worker = None
 
             self.command_router = DesktopCommandRouter() if DesktopCommandRouter else None
             self.worker = AIWorker()
@@ -219,8 +263,53 @@ if PYQT6_AVAILABLE:
                 self.input.setText(self.initial_command)
                 self.send_message()
             elif self.wake_only:
-                self.add_message("REX", "I heard you. What can I do for you?", False)
+                greeting = "I heard you. What can I do for you?"
+                self.add_message("REX", greeting, False)
+                self.speak_response(greeting)
                 self.input.setFocus()
+
+        def start_voice_capture(self):
+            if self.voice_worker and self.voice_worker.isRunning():
+                return
+            self.voice_button.setEnabled(False)
+            self.voice_button.setText("Listening…")
+            self.voice_worker = VoiceCaptureWorker(self)
+            self.voice_worker.recognized.connect(self.on_voice_text)
+            self.voice_worker.failed.connect(self.on_voice_error)
+            self.voice_worker.finished.connect(self.on_voice_finished)
+            self.voice_worker.start()
+
+        def on_voice_text(self, text):
+            self.input.setText(text)
+            self.send_message()
+
+        def on_voice_error(self, message):
+            self.add_message("VOICE", message, False)
+
+        def on_voice_finished(self):
+            self.voice_button.setEnabled(True)
+            self.voice_button.setText("🎙 Speak")
+            self.voice_worker = None
+
+        def speak_response(self, text):
+            if not self.speak_toggle.isChecked():
+                return
+            tts = shutil.which("espeak-ng")
+            if not tts:
+                self.add_message("VOICE", "Local speech output is unavailable. Install espeak-ng.", False)
+                return
+            spoken = (text or "").strip()
+            if not spoken:
+                return
+            try:
+                subprocess.Popen(
+                    [tts, "-s", "155", "--", spoken[:2500]],
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+            except Exception as exc:
+                self.add_message("VOICE", "Could not start speech output: " + str(exc), False)
 
         def send_message(self):
             message = self.input.text().strip()
@@ -232,6 +321,7 @@ if PYQT6_AVAILABLE:
                 result = self.command_router.execute(message, self.confirm_desktop_action)
                 if result is not None:
                     self.add_message("REX", result, False)
+                    self.speak_response(result)
                     return
             self.send_button.setEnabled(False)
             self.send_button.setText("Working…")
@@ -251,6 +341,7 @@ if PYQT6_AVAILABLE:
 
         def show_response(self, response):
             self.add_message("REX", response, False)
+            self.speak_response(response)
             self.send_button.setEnabled(True)
             self.send_button.setText("Send  ➤")
 
@@ -266,6 +357,8 @@ if PYQT6_AVAILABLE:
         def closeEvent(self, event):
             self.worker.stop()
             self.worker.wait(3000)
+            if self.voice_worker and self.voice_worker.isRunning():
+                self.voice_worker.wait(3000)
             event.accept()
 
 
