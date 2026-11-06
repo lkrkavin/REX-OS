@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation" ]
     tags:
       - 'v*'
   pull_request:
@@ -31,6 +31,8 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_openrouter_platforms.py' -v
           python3 -m unittest discover -s tests -p 'test_rex_automation_sync.py' -v
           python3 -m unittest discover -s tests -p 'test_mac_remote.py' -v
+          python3 -m unittest discover -s tests -p 'test_device_registry_security.py' -v
+          python3 -m unittest discover -s tests -p 'test_pairing_security.py' -v
 
       - name: Free disk space on runner
         run: |
