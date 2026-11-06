@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration" ]
     tags:
       - 'v*'
   pull_request:
@@ -20,6 +20,13 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Build REX holographic assistant interface
+        run: |
+          npm install --prefix vendor/jarvis-upstream --no-audit --no-fund
+          npm run build --prefix vendor/jarvis-upstream
+          mkdir -p build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui
+          cp -a vendor/jarvis-upstream/dist/. build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui/
 
       - name: Python syntax and Google Search tests
         run: |

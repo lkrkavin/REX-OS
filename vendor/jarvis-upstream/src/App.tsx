@@ -63,7 +63,7 @@ const newId = () =>
 
 /** The same mishearings voice.ts accepts for the wake word — otherwise a turn
  *  that woke him as "travis" gets that word sent on to the model as a question. */
-const NAME = '(?:jarvis|jarvys|jervis|travis|jarviss|java\'s|jarv)'
+const NAME = '(?:rex|rexx|wrecks)'
 /** A bare vocative — "Jarvis", "hey jarvis" — with nothing asked. */
 const BARE_NAME = new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME}[\\s,.!?]*$`, 'i')
 /** A leading vocative on a real command: "Jarvis, what's the weather". */
@@ -463,9 +463,9 @@ export default function App() {
     })
     const warming = warm().catch((err: Error) => s.setError(err.message))
 
-    if (!usingBridge && !env.anthropicKey) {
+    if (false) {
       s.setError(
-        'No Anthropic API key — copy .env.example to .env.local and set VITE_ANTHROPIC_API_KEY.',
+        'REX local OpenRouter service is not available.',
       )
     }
 

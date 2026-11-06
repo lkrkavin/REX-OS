@@ -27,6 +27,7 @@ wmctrl
 xdotool
 
 # REX Omni and secure AI provider configuration
+python3-aiohttp
 python3-keyring
 flatpak
 policykit-1
