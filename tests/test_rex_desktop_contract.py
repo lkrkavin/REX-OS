@@ -31,9 +31,11 @@ class TestREXDesktopContract(unittest.TestCase):
                         "def speak_response","espeak-ng","Speak REX replies aloud"):
             self.assertIn(feature,source)
         packages=(ROOT/"build/config/package-lists/rex-desktop.list.chroot").read_text()
-        for package in ("python3-speechrecognition","python3-pyaudio",
-                        "python3-pocketsphinx","pocketsphinx-en-us","espeak-ng"):
+        for package in ("python3-pyaudio","python3-pocketsphinx",
+                        "pocketsphinx-en-us","espeak-ng"):
             self.assertIn("\n"+package+"\n",packages)
+        pip_hook=(ROOT/"build/config/hooks/normal/03-install-pip-deps.hook.chroot").read_text()
+        self.assertIn("SpeechRecognition",pip_hook)
     def test_openrouter_connection_button_performs_authenticated_check(self):
         source=(ROOT/"ui/rex_ai_settings.py").read_text()
         self.assertIn("/api/v1/auth/key",source)
