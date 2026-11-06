@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Name=REX Holographic Assistant
+Comment=Start the REX holographic AI interface
+Exec=/usr/bin/python3 /opt/rex-os/services/rex_jarvis_app.py --launch
+Icon=applications-internet
+Terminal=false
+X-GNOME-Autostart-enabled=true

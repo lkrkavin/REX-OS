@@ -1,7 +1,15 @@
-# Vendored JARVIS interface source
+# REX holographic assistant integration
 
-Upstream: https://github.com/adewaskar/jarvis
-Licence: MIT; see LICENSE.
-Snapshot: upstream main, retrieved 2026-11-06.
+Upstream source: https://github.com/adewaskar/jarvis (MIT; see LICENSE).
+The upstream visual interface is adapted and rebranded as REX. The active UI calls
+only the same-origin local REX service at 127.0.0.1:8764. The local service uses
+REX's existing OpenRouter provider and OS keyring; no API key is shipped to the
+browser, Vite bundle, source tree, or ISO.
 
-This is a source snapshot for REX adaptation, not yet the active REX assistant runtime. The upstream Claude Agent SDK bridge and browser-direct Anthropic client are reference-only and MUST NOT be enabled in REX OS. REX runtime must use the REX-owned provider layer and OpenRouter adapter, with credentials kept server-side/in the OS keyring. Upstream audio assets are intentionally excluded because their rights require separate review before commercial redistribution. Preserve upstream MIT notices in derivatives.
+The upstream Claude Agent SDK bridge and browser-direct Anthropic client are
+reference-only and are not imported by the active REX brain module. No Claude
+login is required. The local service exposes health and text-generation routes
+only; it does not expose shell, filesystem, camera, remote-device, or arbitrary
+computer-control tools. Microphone access remains controlled by the user in the
+interface. Audio assets remain excluded pending separate rights review.
+Preserve upstream MIT notices in derivatives.
