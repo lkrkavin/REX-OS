@@ -75,7 +75,13 @@ class Handler(BaseHTTPRequestHandler):
 def main():
     parser=argparse.ArgumentParser(); parser.add_argument("--launch",action="store_true")
     args=parser.parse_args(); server=ThreadingHTTPServer((HOST,PORT),Handler); server.daemon_threads=True
-    if args.launch:\n        def launch_ui():\n            if shutil.which("chromium"):\n                subprocess.Popen(["chromium", "--app=" + ORIGIN], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)\n            else:\n                webbrowser.open(ORIGIN)\n        threading.Timer(1.0, launch_ui).start()
+    if args.launch:
+        def launch_ui():
+            if shutil.which("chromium"):
+                subprocess.Popen(["chromium", "--app=" + ORIGIN], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                webbrowser.open(ORIGIN)
+        threading.Timer(1.0, launch_ui).start()
     print(f"REX assistant listening on {ORIGIN}",flush=True)
     try: server.serve_forever()
     except KeyboardInterrupt: pass
