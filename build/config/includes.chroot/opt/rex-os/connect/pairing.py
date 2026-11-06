@@ -55,7 +55,7 @@ class PairingResult:
     message: str = ""
     session_id: Optional[str] = None
     error: Optional[str] = None
-    auth_token: Optional[str] = None  # Returned once to the newly paired device.
+    auth_token: Optional[str] = field(default=None, repr=False)  # Returned once to the newly paired device.
 
 
 class PairingManager:
@@ -218,6 +218,13 @@ class PairingManager:
                 success=False,
                 message="Pairing session has expired",
                 error="SESSION_EXPIRED"
+            )
+
+        if not session.confirmed:
+            return PairingResult(
+                success=False,
+                message="Confirm this pairing request on the REX computer first.",
+                error="LOCAL_CONFIRMATION_REQUIRED"
             )
 
         if not isinstance(pairing_code, str) or not hmac.compare_digest(session.pairing_code, pairing_code):
