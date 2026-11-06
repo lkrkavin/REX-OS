@@ -78,7 +78,7 @@ const WAKE_DEBOUNCE = 1500
  * indication why. Better a rare false wake than a name that does not answer.
  */
 const WAKE =
-  /\b(?:hey|hi|ok|okay|yo)?\s*(?:rex|rex|rex|rex's|rex|rexs|rex|rex)\b(?!'s)/i
+  /\b(?:hey|hi|ok|okay|yo)?\s*(?:rex|rexx|wrecks)\b/i
 
 /** Everything after the wake phrase, which is usually the actual command. */
 function afterWake(text: string): string {
@@ -123,7 +123,7 @@ function afterWake(text: string): string {
  * last word of a real request.
  */
 const CONTINUES =
-  /\b(and|or|but|so|because|since|if|when|while|that|which|who|whose|to|of|in|on|at|by|for|with|from|about|into|onto|over|under|between|through|the|a|an|my|your|his|her|its|our|their|is|are|was|were|be|been|do|does|did|have|has|had|can|could|would|should|will|shall|might|must|like|than|then|as|very|really|just|some|any|all|both|either|neither)$/i
+  /\b(?:hey|hi|ok|okay|yo)?\s*(?:rex|rexx|wrecks)\b/i
 
 /** Trailing punctuation a transcriber emits mid-thought. */
 const TRAILS = /[,;:–—-]$/
@@ -267,7 +267,7 @@ const norm = (s: string) =>
  * would be the single most infuriating failure this file could have.
  */
 const OVERRIDE =
-  /\b(stop|wait|rex|cancel|enough|quiet|hold on|shut up|never ?mind|forget it|no)\b/i
+  /\b(?:hey|hi|ok|okay|yo)?\s*(?:rex|rexx|wrecks)\b/i
 
 /**
  * Words too common to be evidence of anything.

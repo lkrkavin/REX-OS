@@ -31,7 +31,6 @@ import {
 } from './lib/brain'
 import { startAnalyser, micLevel } from './lib/audio'
 import { probeCapabilities } from './lib/capabilities'
-import { env } from './config'
 
 /**
  * The conversation.
@@ -64,9 +63,9 @@ const newId = () =>
 /** The same mishearings voice.ts accepts for the wake word — otherwise a turn
  *  that woke him as "travis" gets that word sent on to the model as a question. */
 const NAME = '(?:rex|rexx|wrecks)'
-/** A bare vocative — "Jarvis", "hey jarvis" — with nothing asked. */
+/** A bare vocative — "Rex", "hey rex" — with nothing asked. */
 const BARE_NAME = new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME}[\\s,.!?]*$`, 'i')
-/** A leading vocative on a real command: "Jarvis, what's the weather". */
+/** A leading vocative on a real command: "Rex, what's the weather". */
 const LEADING_NAME = new RegExp(`^(?:hey|hi|ok|okay|yo)?\\s*${NAME}\\b[\\s,.:!?-]*`, 'i')
 
 export default function App() {
@@ -157,7 +156,7 @@ export default function App() {
             // clear the readout while a slow tool was still running.
             store.getState().setActiveTool(null)
             music.working(false)
-            store.getState().pushTurn({ id: turnId, role: 'jarvis', text: '' })
+            store.getState().pushTurn({ id: turnId, role: 'rex', text: '' })
           }
           store.getState().appendToLastTurn(delta)
           spk.push(delta)
@@ -243,7 +242,7 @@ export default function App() {
     store.getState().setError(null)
     sfx.play('wake')
 
-    // "Jarvis, what's happening in AI this week" in one breath. Waiting for a
+    // "Rex, what's happening in AI this week" in one breath. Waiting for a
     // greeting he didn't need is the most common way an assistant wastes time.
     if (trailing) {
       void respond(trailing)
@@ -294,7 +293,7 @@ export default function App() {
     if (phase === 'offline' || phase === 'boot' || phase === 'dormant') return
 
     // People keep using his name as a vocative once they're already talking to
-    // him. Strip it rather than sending "jarvis" to the model as a question.
+    // him. Strip it rather than sending "rex" to the model as a question.
     if (BARE_NAME.test(text)) {
       listen(AWAIT_SPEECH_MS)
       return
@@ -334,7 +333,7 @@ export default function App() {
       // for the rest of the page, recoverable only by reloading. Reset it and
       // put the button back so the user can simply press it again.
       booting.current = false
-      console.error('[jarvis] power-up failed:', err)
+      console.error('[rex] power-up failed:', err)
       store.getState().setPhase('offline')
       store
         .getState()
@@ -366,7 +365,7 @@ export default function App() {
     watchBlades((blade) => store.getState().pushBlade(blade))
 
     /**
-     * JARVIS asking to see something.
+     * REX asking to see something.
      *
      * Announced on screen for as long as it takes, with whatever he said he was
      * looking for. The camera's own light is on too, but a hardware light that
@@ -421,7 +420,7 @@ export default function App() {
       }
     })
 
-    // The interface is JARVIS's to drive. These arrive out of band, pushed
+    // The interface is REX's to drive. These arrive out of band, pushed
     // mid-turn the way panels are, so a command can retint the reactor or put
     // something into orbit while he is still speaking the sentence about it.
     watchUi((op, args) => {
@@ -446,7 +445,7 @@ export default function App() {
           s.clearScreen(a.what ?? 'all')
           break
         default:
-          console.warn('[jarvis] unknown ui op:', op, args)
+          console.warn('[rex] unknown ui op:', op, args)
       }
     })
     // In bridge mode the conversation lives in the agent session, which is tied
@@ -465,8 +464,8 @@ export default function App() {
 
 
     // Pull the neural voice down during the boot sequence so the first
-    // "Hey Jarvis" isn't waiting on an 86MB download. Deliberately not awaited
-    // — if it's slow, JARVIS comes up on the system voice and swaps over the
+    // "Hey Rex" isn't waiting on an 86MB download. Deliberately not awaited
+    // — if it's slow, REX comes up on the system voice and swaps over the
     // moment the model is ready.
     if (TTS_ENGINE === 'kokoro') {
       void kokoro.load()
@@ -499,7 +498,7 @@ export default function App() {
       await startAnalyser()
     } catch {
       console.warn(
-        '[jarvis] no microphone stream — the reactor will not pulse with your ' +
+        '[rex] no microphone stream — the reactor will not pulse with your ' +
           'voice. Speech recognition is unaffected.',
       )
     }
@@ -560,7 +559,7 @@ export default function App() {
 
     const pump = () => {
       const st = store.getState()
-      // While speaking, follow JARVIS's own output rather than the mic, so the
+      // While speaking, follow REX's own output rather than the mic, so the
       // orb lip-syncs instead of reacting to room noise.
       const lvl =
         st.phase === 'speaking' && speaker.current
@@ -636,7 +635,7 @@ export default function App() {
         t.say('Audio test. If you can hear this, speech output is working, sir.')
         void t.end().then(() => {
           const d = (window as unknown as Record<string, Record<string, unknown>>).__tts
-          console.info('[jarvis] audio test →', d)
+          console.info('[rex] audio test →', d)
           if (d && d.started === 0 && d.rescued === 0) {
             store.getState().setError(
               `No sound produced. engine=${d.engine} voice=${d.voice} error=${d.lastError || 'none'}`,

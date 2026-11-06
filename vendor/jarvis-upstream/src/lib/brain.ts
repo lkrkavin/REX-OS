@@ -1,9 +1,9 @@
 import type { Blade, Panel } from '../store'
 export type Msg = { role: 'user' | 'assistant'; content: string }
 export type AskHandlers = { onText: (delta: string) => void; onTool: (name: string) => void }
-export type ConnectionState = 'connected' | 'connecting' | 'lost' | 'reconnected'
-export type CaptureRequest = { mode: 'watch' | 'capture'; when?: 'past' | 'now'; reason?: string; seconds?: number }
-export type CaptureResult = { dataUrl?: string; mimeType?: string; error?: string }
+export type ConnectionState = 'open' | 'lost' | 'reconnected'
+export type CaptureRequest = { mode: 'look' | 'watch'; reason: string; seconds: number; when: 'now' | 'past' }
+export type CaptureResult = { data?: string; mimeType?: string; error?: string }
 export const usingBridge = false
 let connected = false
 let everConnected = false
@@ -15,9 +15,13 @@ function setConnected(value: boolean) {
  connected = value
  if (!changed) return
  for (const fn of serverListeners) fn(value ? ['REX AI CORE','OPENROUTER'] : [])
- const state: ConnectionState = value ? (everConnected ? 'reconnected' : 'connected') : 'lost'
- if (value) everConnected = true
- for (const fn of connectionListeners) fn(state)
+ if (value) {
+  const state: ConnectionState = everConnected ? 'reconnected' : 'open'
+  everConnected = true
+  for (const fn of connectionListeners) fn(state)
+ } else if (everConnected) {
+  for (const fn of connectionListeners) fn('lost')
+ }
 }
 export async function ask(prompt:string,history:Msg[],handlers:AskHandlers):Promise<{text:string;tools:string[]}> {
  active?.abort()
@@ -32,10 +36,10 @@ export async function warm():Promise<void>{try{const r=await fetch('/api/health'
 export function interrupt():void{active?.abort();active=null}
 export function cancel():void{interrupt()}
 export function isConnected():boolean{return connected}
-export function watchConnection(fn:(state:ConnectionState)=>void):void{connectionListeners.add(fn);fn(connected?'connected':'connecting')}
+export function watchConnection(fn:(state:ConnectionState)=>void):void{connectionListeners.add(fn);if(connected)fn('open')}
 export function watchServers(fn:(servers:string[])=>void):void{serverListeners.add(fn);fn(connected?['REX AI CORE','OPENROUTER']:[])}
 export function watchPanels(_fn:(panel:Panel)=>void):void{}
 export function watchBlades(_fn:(blade:Blade)=>void):void{}
-export function watchUi(_fn:(op:string,args:unknown)=>void):void{}
+export function watchUi(_fn:(op:string,args:any)=>void):void{}
 export function watchCapture(_fn:(req:CaptureRequest)=>Promise<CaptureResult>):void{}
 export function connectedLabels():string[]{return connected?['REX AI CORE','OPENROUTER']:[]}
