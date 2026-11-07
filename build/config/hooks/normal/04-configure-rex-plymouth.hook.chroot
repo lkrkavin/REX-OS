@@ -1,0 +1,23 @@
+#!/bin/sh
+# Install and select the REX OS Plymouth boot theme.
+set -e
+
+THEME_DIR="/usr/share/plymouth/themes/rex"
+mkdir -p "$THEME_DIR"
+
+# Convert the small vector logo strokes to the PNG assets Plymouth loads.
+rsvg-convert -o "$THEME_DIR/r-stem.png" "$THEME_DIR/r-stem.svg"
+rsvg-convert -o "$THEME_DIR/r-bowl.png" "$THEME_DIR/r-bowl.svg"
+rsvg-convert -o "$THEME_DIR/r-leg.png" "$THEME_DIR/r-leg.svg"
+
+# Select REX as the system boot splash and include it in the initramfs.
+mkdir -p /etc/plymouth
+cat > /etc/plymouth/plymouthd.conf <<'EOF'
+[Daemon]
+Theme=rex
+ShowDelay=0
+DeviceTimeout=8
+EOF
+
+update-initramfs -u -k all
+echo "[REX OS] REX Plymouth boot theme configured."
