@@ -31,5 +31,19 @@ class TestSyncService(unittest.TestCase):
    base=Path(d)/"config";service=SyncService(base);bundle=Path(d)/"bundle.json"
    service.export_bundle(bundle);data=json.loads(bundle.read_text());data["payload"]["files"]["ui_preferences.json"]={"x":1};bundle.write_text(json.dumps(data))
    with self.assertRaises(ValueError):service.import_bundle(bundle)
+ def test_rejects_non_object_json_bundle(self):
+  with tempfile.TemporaryDirectory() as d:
+   bundle=Path(d)/"bad.json";bundle.write_text("[]")
+   with self.assertRaises(ValueError):SyncService(Path(d)/"config").import_bundle(bundle)
+ def test_rejects_non_object_payload_and_files(self):
+  with tempfile.TemporaryDirectory() as d:
+   service=SyncService(Path(d)/"config");bundle=Path(d)/"bad.json"
+   for data in ({"payload":[],"sha256":"0"*64},{"payload":{"version":1,"files":[]},"sha256":"0"*64}):
+    bundle.write_text(json.dumps(data))
+    with self.assertRaises(ValueError):service.import_bundle(bundle)
+ def test_rejects_oversized_bundle(self):
+  with tempfile.TemporaryDirectory() as d:
+   bundle=Path(d)/"large.json";bundle.write_bytes(b" "*(SyncService.MAX_BUNDLE_BYTES+1))
+   with self.assertRaises(ValueError):SyncService(Path(d)/"config").import_bundle(bundle)
 
 if __name__=="__main__":unittest.main()
