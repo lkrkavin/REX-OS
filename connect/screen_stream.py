@@ -61,7 +61,9 @@ class ScreenStreamer:
     - Efficient encoding for low-RAM hardware
     """
 
-    def __init__(self):
+    def __init__(self, security_manager=None):
+        from .security import get_security_manager
+        self._security_manager = security_manager or get_security_manager()
         self._active_streams: Dict[str, StreamInfo] = {}
         self._callbacks: List[Callable[[str, bytes], None]] = []
         self._running = False
@@ -86,9 +88,11 @@ class ScreenStreamer:
             # Fail closed: stream must not start without user consent
             return False
 
-        # Check if permission exists via security manager
-        from .security import Permission, get_security_manager
-        security = get_security_manager()
+        # User consent is necessary but not sufficient: require a scoped grant too.
+        from .security import Permission
+        security = self._security_manager
+        if security is None or not security.check_permission(device_id, Permission.SCREEN_STREAMING):
+            return False
 
         try:
             import uuid
