@@ -1,0 +1,8 @@
+[Plymouth Theme]
+Name=REX OS
+Description=Minimal REX OS startup with a drawn R and greeting
+ModuleName=script
+
+[script]
+ImageDir=/usr/share/plymouth/themes/rex
+ScriptFile=/usr/share/plymouth/themes/rex/rex.script
