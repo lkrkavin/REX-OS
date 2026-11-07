@@ -2,6 +2,10 @@ import unittest
 from connect.security import Permission, PermissionLevel, SecurityManager
 from connect.remote_input import InputEvent, InputResult, InputType, RemoteInputHandler
 from connect.screen_stream import ScreenStreamer
+from connect.device_registry import DeviceInfo, DeviceRegistry, DeviceType
+from connect.security import get_security_manager
+import tempfile
+from pathlib import Path
 
 
 class SharedSecurityIntegrationTests(unittest.IsolatedAsyncioTestCase):
@@ -39,6 +43,17 @@ class SharedSecurityIntegrationTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(result.success)
         self.assertEqual(received[0].event_type, InputType.MOUSE_CLICK)
         self.assertEqual(received[0].data["button"], "right")
+
+    async def test_device_registry_revocation_clears_shared_permissions(self):
+        manager = get_security_manager()
+        device_id = "security-integration-revocation-test"
+        manager.grant_device_permissions(device_id, PermissionLevel.CONTROL)
+        with tempfile.TemporaryDirectory() as directory:
+            registry = DeviceRegistry(str(Path(directory) / "devices.json"))
+            registry.add_device(DeviceInfo(device_id, "Test phone", DeviceType.ANDROID_PHONE))
+            self.assertTrue(manager.check_permission(device_id, Permission.REMOTE_MOUSE))
+            self.assertTrue(registry.revoke_device(device_id))
+            self.assertFalse(manager.check_permission(device_id, Permission.REMOTE_MOUSE))
 
     async def test_screen_stream_requires_permission_and_user_consent(self):
         denied = SecurityManager()
