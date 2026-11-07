@@ -1,0 +1,100 @@
+# REX OS Plymouth theme.
+# Minimal charcoal screen: draw the R in three deliberate strokes, then
+# reveal "Hello" character-by-character. Plymouth exits naturally when the
+# display manager takes over, handing off to the login/desktop screen.
+
+Window.SetBackgroundTopColor(0.035, 0.043, 0.059);
+Window.SetBackgroundBottomColor(0.035, 0.043, 0.059);
+
+screen_w = Window.GetWidth();
+screen_h = Window.GetHeight();
+center_x = screen_w / 2;
+center_y = screen_h / 2;
+
+stem_image = Image("r-stem.png");
+bowl_image = Image("r-bowl.png");
+leg_image = Image("r-leg.png");
+
+stem = Sprite(stem_image);
+bowl = Sprite(bowl_image);
+leg = Sprite(leg_image);
+
+logo_x = center_x - stem_image.GetWidth() / 2;
+logo_y = center_y - 190;
+
+stem.SetPosition(logo_x, logo_y, 10);
+bowl.SetPosition(logo_x, logo_y, 11);
+leg.SetPosition(logo_x, logo_y, 12);
+stem.SetOpacity(0);
+bowl.SetOpacity(0);
+leg.SetOpacity(0);
+
+# Keep the REX OS wordmark in the same restrained style as the supplied image.
+wordmark_image = Image.Text("REX OS", 0.78, 0.82, 0.90);
+wordmark = Sprite(wordmark_image);
+wordmark.SetPosition(center_x - wordmark_image.GetWidth() / 2, center_y + 42, 10);
+wordmark.SetOpacity(0);
+
+hello_h_image = Image.Text("H", 0.82, 0.88, 0.96);
+hello_e_image = Image.Text("e", 0.82, 0.88, 0.96);
+hello_l1_image = Image.Text("l", 0.82, 0.88, 0.96);
+hello_l2_image = Image.Text("l", 0.82, 0.88, 0.96);
+hello_o_image = Image.Text("o", 0.82, 0.88, 0.96);
+
+hello_h = Sprite(hello_h_image);
+hello_e = Sprite(hello_e_image);
+hello_l1 = Sprite(hello_l1_image);
+hello_l2 = Sprite(hello_l2_image);
+hello_o = Sprite(hello_o_image);
+
+hello_y = center_y + 112;
+hello_start_x = center_x - 36;
+hello_h.SetPosition(hello_start_x, hello_y, 20);
+hello_e.SetPosition(hello_start_x + 18, hello_y, 20);
+hello_l1.SetPosition(hello_start_x + 34, hello_y, 20);
+hello_l2.SetPosition(hello_start_x + 42, hello_y, 20);
+hello_o.SetPosition(hello_start_x + 50, hello_y, 20);
+
+hello_h.SetOpacity(0);
+hello_e.SetOpacity(0);
+hello_l1.SetOpacity(0);
+hello_l2.SetOpacity(0);
+hello_o.SetOpacity(0);
+
+# Small, quiet spinner near the lower centre.
+spinner_image = Image.Text("·", 0.38, 0.52, 0.72);
+spinner = Sprite(spinner_image);
+spinner.SetPosition(center_x - spinner_image.GetWidth() / 2, screen_h - 78, 5);
+spinner.SetOpacity(0);
+
+frame = 0;
+fun refresh_callback()
+{
+    frame++;
+
+    # The three R strokes are introduced one after another, like handwriting.
+    if (frame > 8)  stem.SetOpacity(1);
+    if (frame > 34) bowl.SetOpacity(1);
+    if (frame > 62) leg.SetOpacity(1);
+
+    # A brief beat, then a quicker handwritten-style Hello reveal.
+    if (frame > 88)  hello_h.SetOpacity(1);
+    if (frame > 96)  hello_e.SetOpacity(1);
+    if (frame > 104) hello_l1.SetOpacity(1);
+    if (frame > 112) hello_l2.SetOpacity(1);
+    if (frame > 120) hello_o.SetOpacity(1);
+
+    # The REX OS wordmark settles in after the greeting.
+    if (frame > 138) wordmark.SetOpacity(1);
+    if (frame > 150) spinner.SetOpacity(0.65);
+}
+
+Plymouth.SetRefreshFunction(refresh_callback);
+
+fun progress_callback(duration, progress)
+{
+    # Boot progress is intentionally not mapped to a fake percentage.
+    # The greeting remains visible until Plymouth hands off to the display manager.
+}
+
+Plymouth.SetBootProgressFunction(progress_callback);
