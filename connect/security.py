@@ -172,7 +172,7 @@ class SecurityManager:
         with self._lock:return tuple(self._audit[-min(limit,self.MAX_AUDIT_EVENTS):])
 
     def sanitize_path(self,path_str,allowed_roots=None):
-        if not isinstance(path_str,str) or not path_str or "\\x00" in path_str:return None
+        if not isinstance(path_str,str) or not path_str or "\x00" in path_str:return None
         try:
             candidate=Path(path_str).expanduser().resolve(strict=False)
             roots=[Path(x).expanduser().resolve(strict=False) for x in allowed_roots] if allowed_roots is not None else [Path.home().resolve(),(Path("/var/lib/rex/connect/transfers") if os.name!="nt" else Path("C:/rex/transfers")).resolve(strict=False)]
