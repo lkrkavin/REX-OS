@@ -17,6 +17,8 @@ from enum import Enum
 from pathlib import Path
 import threading
 
+from connect.security import Permission, get_security_manager
+
 
 class TransferStatus(Enum):
     PENDING = "pending"
@@ -58,7 +60,8 @@ class FileTransferManager:
 
     DEFAULT_TRANSFER_ROOT = "transfers"
 
-    def __init__(self, base_path: str = None):
+    def __init__(self, base_path: str = None, security_manager=None):
+        self._security = security_manager or get_security_manager()
         self._base_path = Path(base_path or os.path.expanduser("~/REX-Transfers"))
         self._transfers: Dict[str, TransferInfo] = {}
         self._lock = threading.RLock()
@@ -66,6 +69,16 @@ class FileTransferManager:
 
         # Create base transfer directory
         self._base_path.mkdir(parents=True, exist_ok=True)
+
+    def _authorized_transfer_peer(self, source_device: str, target_device: str) -> bool:
+        """Require FILE_TRANSFER permission from the remote peer; local-only work stays local."""
+        peer_id = source_device if source_device != "local" else target_device
+        if peer_id == "local":
+            return True
+        try:
+            return bool(self._security and self._security.check_permission(peer_id, Permission.FILE_TRANSFER))
+        except Exception:
+            return False
 
     def register_callback(self, callback: Callable[[str, TransferInfo], None]):
         """Register callback for transfer status changes"""
@@ -130,6 +143,12 @@ class FileTransferManager:
         Validate a file transfer request.
         Returns validated info dict or None if invalid.
         """
+        if (type(filesize) is not int or filesize < 0
+                or not isinstance(source_device, str) or not source_device.strip()
+                or not isinstance(target_device, str) or not target_device.strip()
+                or not self._authorized_transfer_peer(source_device, target_device)):
+            return None
+
         clean_name = self._sanitize_filename(filename)
         if not clean_name:
             return None
@@ -207,6 +226,12 @@ class FileTransferManager:
             transfer = self._transfers[transfer_id]
             if not transfer.requires_confirmation and not confirmed:
                 return False  # Can't override auto-reject
+            if confirmed and not self._authorized_transfer_peer(transfer.source_device, transfer.target_device):
+                transfer.status = TransferStatus.DENIED
+                transfer.error = "FILE_TRANSFER permission denied or revoked"
+                transfer.completed_at = time.time()
+                self._notify_change(transfer_id, transfer)
+                return False
 
             transfer.status = TransferStatus.DENIED if not confirmed else TransferStatus.PREPARING
             transfer.completed_at = time.time()
@@ -222,6 +247,12 @@ class FileTransferManager:
 
             transfer = self._transfers[transfer_id]
             if transfer.status != TransferStatus.PREPARING:
+                return False
+            if not self._authorized_transfer_peer(transfer.source_device, transfer.target_device):
+                transfer.status = TransferStatus.DENIED
+                transfer.error = "FILE_TRANSFER permission denied or revoked"
+                transfer.completed_at = time.time()
+                self._notify_change(transfer_id, transfer)
                 return False
 
             transfer.status = TransferStatus.TRANSFERRING
