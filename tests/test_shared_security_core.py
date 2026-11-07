@@ -33,7 +33,7 @@ class SharedSecurityCoreTests(unittest.TestCase):
     def test_path_sanitizer_rejects_nul_bytes(self):
         manager = SecurityManager()
         with tempfile.TemporaryDirectory() as directory:
-            self.assertIsNone(manager.sanitize_path(directory + "\\x00bad", [directory]))
+            self.assertIsNone(manager.sanitize_path(directory + "\x00bad", [directory]))
 
     def test_path_sanitizer_resolves_symlink_escape(self):
         with tempfile.TemporaryDirectory() as d:
