@@ -30,6 +30,11 @@ class SharedSecurityCoreTests(unittest.TestCase):
     def test_audit_records_denials(self):
         m=SecurityManager(); self.assertFalse(m.authorize_action("x","unknown_action"))
         self.assertFalse(m.audit_events()[-1].allowed)
+    def test_path_sanitizer_rejects_nul_bytes(self):
+        manager = SecurityManager()
+        with tempfile.TemporaryDirectory() as directory:
+            self.assertIsNone(manager.sanitize_path(directory + "\\x00bad", [directory]))
+
     def test_path_sanitizer_resolves_symlink_escape(self):
         with tempfile.TemporaryDirectory() as d:
             root=Path(d)/"root"; root.mkdir(); outside=Path(d)/"outside"; outside.mkdir()
