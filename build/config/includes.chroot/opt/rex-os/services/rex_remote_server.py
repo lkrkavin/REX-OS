@@ -19,6 +19,7 @@ import sys
 import time
 import base64
 import hashlib
+import hmac
 import psutil
 from datetime import datetime
 from typing import Dict, List, Any, Optional
@@ -271,6 +272,9 @@ class RexRemoteServer:
         self.notifications: List[Dict] = []
         self.session_tokens: Dict[str, Dict] = {}
         self.relay_websocket = None
+        # No WebSocket client is trusted until it proves possession of this
+        # out-of-band secret. Keep the secret outside the repository and ISO.
+        self.auth_token = os.environ.get("REX_REMOTE_AUTH_TOKEN", "")
 
     def add_notification(self, title: str, message: str, level: str = "info"):
         """Add a notification"""
@@ -434,132 +438,51 @@ class RexRemoteServer:
                 "timestamp": datetime.now().isoformat()
             }))
 
-    def execute_action(self, action: Dict) -> Dict:
-        """Execute remote action"""
-        action_type = action.get("type")
-
+    def authenticate_client(self, message: str) -> bool:
+        """Validate the first WebSocket frame using a locally provisioned secret."""
+        if not self.auth_token:
+            return False
         try:
-            if action_type == "mouse_click":
-                if PYAUTOGUI_AVAILABLE:
-                    button = action.get("button", "left")
-                    x = action.get("x")
-                    y = action.get("y")
-                    if x is not None and y is not None:
-                        pyautogui.click(x, y, button=button)
-                    else:
-                        pyautogui.click(button=button)
-                    return {"success": True, "message": f"Clicked with {button} button"}
-                return {"success": False, "error": "pyautogui not available"}
+            data = json.loads(message)
+            supplied = data.get("token", "")
+            return (
+                data.get("type") == "authenticate"
+                and isinstance(supplied, str)
+                and bool(supplied)
+                and hmac.compare_digest(supplied, self.auth_token)
+            )
+        except (TypeError, ValueError, json.JSONDecodeError):
+            return False
 
-            elif action_type == "mouse_move":
-                if PYAUTOGUI_AVAILABLE:
-                    x = action.get("x", 0)
-                    y = action.get("y", 0)
-                    pyautogui.moveRel(x, y)
-                    return {"success": True, "message": f"Moved mouse by ({x}, {y})"}
-                return {"success": False, "error": "pyautogui not available"}
+    def execute_action(self, action: Dict) -> Dict:
+        """Reject remote mutations until the local approval broker is integrated.
 
-            elif action_type == "scroll":
-                if PYAUTOGUI_AVAILABLE:
-                    amount = action.get("amount", 1)
-                    pyautogui.scroll(amount)
-                    return {"success": True, "message": f"Scrolled by {amount}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "mouse_down":
-                if PYAUTOGUI_AVAILABLE:
-                    button = action.get("button", "left")
-                    x = action.get("x")
-                    y = action.get("y")
-                    if x is not None and y is not None:
-                        pyautogui.mouseDown(x, y, button=button)
-                    else:
-                        pyautogui.mouseDown(button=button)
-                    return {"success": True, "message": f"Mouse down: {button}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "mouse_up":
-                if PYAUTOGUI_AVAILABLE:
-                    button = action.get("button", "left")
-                    x = action.get("x")
-                    y = action.get("y")
-                    if x is not None and y is not None:
-                        pyautogui.mouseUp(x, y, button=button)
-                    else:
-                        pyautogui.mouseUp(button=button)
-                    return {"success": True, "message": f"Mouse up: {button}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "keyboard_text":
-                if PYAUTOGUI_AVAILABLE:
-                    text = action.get("text", "")
-                    if text:
-                        pyautogui.write(text)
-                        return {"success": True, "message": f"Typed: {text}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "key_press":
-                if PYAUTOGUI_AVAILABLE:
-                    key = action.get("key")
-                    if key:
-                        pyautogui.press(key)
-                        return {"success": True, "message": f"Pressed {key}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "key_tap":
-                if PYAUTOGUI_AVAILABLE:
-                    key = action.get("key")
-                    if key:
-                        pyautogui.keyDown(key)
-                        pyautogui.keyUp(key)
-                        return {"success": True, "message": f"Tapped {key}"}
-                return {"success": False, "error": "pyautogui not available"}
-
-            elif action_type == "open_app":
-                app = action.get("app", "")
-                if app:
-                    os.system(f"xdg-open {app} 2>/dev/null || open {app} 2>/dev/null || start {app}" if sys.platform == "win32" else f"open {app}")
-                    return {"success": True, "message": f"Opened: {app}"}
-                return {"success": False, "error": "Application not specified"}
-
-            elif action_type == "lock":
-                if sys.platform == "win32":
-                    os.system("rundll32.exe user32.dll,LockWorkStation")
-                elif sys.platform == "darwin":
-                    os.system("osascript -e 'tell application \"System Events\" to keystroke \"q\" using {command down, control down}'")
-                else:
-                    os.system("loginctl lock-sessions")
-                return {"success": True, "message": "Computer locked"}
-
-            elif action_type == "logout":
-                return {"success": False, "message": "Log out requires user confirmation"}
-
-            elif action_type == "screenshot":
-                img = self.screen_capture.capture()
-                if img:
-                    return {"success": True, "image": img}
-                return {"success": False, "error": "Capture failed"}
-
-            elif action_type == "terminate_process":
-                pid = action.get("pid")
-                if pid:
-                    return self.monitor.kill_process(pid)
-                return {"success": False, "error": "PID not specified"}
-
-            elif action_type == "get_process":
-                name = action.get("name") or action.get("process")
-                if name:
-                    proc = self.monitor.get_process_by_name(name)
-                    if proc:
-                        return {"success": True, "data": proc}
-                    return {"success": False, "error": f"Process '{name}' not found"}
-                return {"success": False, "error": "Process name not specified"}
-
-            else:
-                return {"success": False, "error": f"Unknown action: {action_type}"}
-
-        except Exception as e:
-            return {"success": False, "error": str(e)}
+        This intentionally fails closed. A network-authenticated device is not
+        automatically authorized to type, click, launch programs, lock the
+        workstation, or terminate processes.
+        """
+        if not isinstance(action, dict):
+            return {"success": False, "error": "Invalid action payload"}
+        action_type = action.get("type")
+        if action_type == "get_process":
+            name = action.get("name") or action.get("process")
+            if not isinstance(name, str) or not name.strip() or len(name) > 128:
+                return {"success": False, "error": "Invalid process name"}
+            proc = self.monitor.get_process_by_name(name.strip())
+            return (
+                {"success": True, "data": proc}
+                if proc else {"success": False, "error": "Process not found"}
+            )
+        if action_type == "screenshot":
+            image = self.screen_capture.capture()
+            return (
+                {"success": True, "image": image}
+                if image else {"success": False, "error": "Capture unavailable"}
+            )
+        return {
+            "success": False,
+            "error": "Remote modification is disabled until local user approval is connected"
+        }
 
     async def register_client(self, websocket, client_id: str = None) -> str:
         """Register a new WebSocket connection"""
@@ -615,19 +538,33 @@ class RexRemoteServer:
                 await self.unregister_client(client_id)
 
     async def handle_websocket(self, websocket, path=None):
-        """Handle WebSocket connection"""
-        client_id = await self.register_client(websocket)
-        print(f"Client {client_id} connected")
-
+        """Require authentication before registering or serving a WebSocket client."""
+        client_id = None
         try:
+            if not self.auth_token:
+                await websocket.close(code=1011, reason="Remote authentication is not configured")
+                return
+            try:
+                first_message = await asyncio.wait_for(websocket.recv(), timeout=10)
+            except asyncio.TimeoutError:
+                await websocket.close(code=1008, reason="Authentication timeout")
+                return
+            if not self.authenticate_client(first_message):
+                await websocket.close(code=1008, reason="Authentication failed")
+                return
+
+            client_id = await self.register_client(websocket)
+            print(f"Authenticated REX Remote client {client_id} connected")
             async for message in websocket:
                 await self.handle_message(websocket, message)
-        except websockets.exceptions.ConnectionClosed:
-            print(f"Client {client_id} disconnected")
         except Exception as e:
-            print(f"Error handling client {client_id}: {e}")
+            if WEBSOCKETS_AVAILABLE and isinstance(e, websockets.exceptions.ConnectionClosed):
+                print("REX Remote client disconnected")
+            else:
+                print(f"REX Remote connection error: {e}")
         finally:
-            await self.unregister_client(client_id)
+            if client_id is not None:
+                await self.unregister_client(client_id)
 
     async def run_local(self):
         """Run the server on localhost"""
@@ -652,10 +589,15 @@ class RexRemoteServer:
             return
 
         print(f"Connecting to relay at {RELAY_HOST}:{RELAY_PORT}")
-        if await self.connect_to_relay("session-token-placeholder"):
-            print("Connected to relay, accepting phone connections")
+        relay_token = os.environ.get("REX_RELAY_TOKEN", "")
+        if not relay_token:
+            print("REX_RELAY_TOKEN is not configured; relay mode is disabled")
+            await self.run_local()
+            return
+        if await self.connect_to_relay(relay_token):
+            print("Connected to relay")
         else:
-            print("Failed to connect to relay, falling back to local mode")
+            print("Relay authentication failed; falling back to local mode")
             await self.run_local()
 
 
