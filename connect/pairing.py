@@ -260,8 +260,16 @@ class PairingManager:
             metadata=device_info or {}
         )
 
-        # Add to registry
+        # Add to registry, then grant only the least-privilege default permissions.
         self._registry.add_device(device)
+        from .security import PermissionLevel, get_security_manager
+        if not get_security_manager().grant_device_permissions(device_id, PermissionLevel.READ_ONLY):
+            self._registry.remove_device(device_id)
+            return PairingResult(
+                success=False,
+                message="Could not initialize device security permissions",
+                error="SECURITY_GRANT_FAILED"
+            )
 
         # Mark session as confirmed
         with self._lock:
