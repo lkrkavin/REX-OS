@@ -282,5 +282,6 @@ def get_input_handler() -> RemoteInputHandler:
     """Get global input handler instance"""
     global _global_input_handler
     if _global_input_handler is None:
-        _global_input_handler = RemoteInputHandler()
+        from .security import get_security_manager
+        _global_input_handler = RemoteInputHandler(get_security_manager())
     return _global_input_handler
