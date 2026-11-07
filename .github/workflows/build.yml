@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration", "feat/rex156-complete-release" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration", "feat/rex156-complete-release", "feat/rex157-unified-12-feature-product" ]
     tags:
       - 'v*'
   pull_request:
