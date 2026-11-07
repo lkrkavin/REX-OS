@@ -1,5 +1,8 @@
 # REX OS graphical desktop packages
 # KDE Plasma 5 desktop and display manager
+plymouth
+plymouth-themes
+librsvg2-bin
 kde-plasma-desktop
 sddm
 xorg
