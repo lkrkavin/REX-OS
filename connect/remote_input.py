@@ -69,24 +69,46 @@ class RemoteInputHandler:
     async def process_input(
         self,
         event: InputEvent,
-        security_manager: 'SecurityManager',
-        device_id: str
+        security_manager: 'SecurityManager' = None,
+        device_id: str = ""
     ) -> InputResult:
         """
         Process a remote input event.
         Requires permission validation through security manager.
         Fails closed if permission denied or handler unavailable.
         """
-        # Validate permissions
+        # Fail closed: every remote input must be authorized by the shared core.
         from .security import Permission
 
-        if security_manager:
-            if not security_manager.check_permission(device_id, Permission.REMOTE_MOUSE if 'mouse' in event.event_type.value else Permission.REMOTE_KEYBOARD if 'keyboard' in event.event_type.value else Permission.MEDIA_CONTROL if 'media' in event.event_type.value else Permission.LOCK_SCREEN):
-                return InputResult(
-                    success=False,
-                    message="Permission denied for input type",
-                    error="PERMISSION_DENIED"
-                )
+        manager = security_manager or self._security_manager
+        if not isinstance(event, InputEvent) or not isinstance(device_id, str) or not device_id:
+            return InputResult(False, "Invalid input request", "INVALID_REQUEST")
+        if event.source_device != device_id or manager is None:
+            return InputResult(False, "Security context missing or device mismatch", "PERMISSION_DENIED")
+
+        permission_by_type = {
+            InputType.MOUSE_MOVE: Permission.REMOTE_MOUSE,
+            InputType.MOUSE_CLICK: Permission.REMOTE_MOUSE,
+            InputType.MOUSE_SCROLL: Permission.REMOTE_MOUSE,
+            InputType.KEYBOARD_TEXT: Permission.REMOTE_KEYBOARD,
+            InputType.KEYBOARD_KEY: Permission.REMOTE_KEYBOARD,
+            InputType.MEDIA_PLAY: Permission.MEDIA_CONTROL,
+            InputType.MEDIA_PAUSE: Permission.MEDIA_CONTROL,
+            InputType.MEDIA_NEXT: Permission.MEDIA_CONTROL,
+            InputType.MEDIA_PREVIOUS: Permission.MEDIA_CONTROL,
+            InputType.MEDIA_VOLUME_UP: Permission.MEDIA_CONTROL,
+            InputType.MEDIA_VOLUME_DOWN: Permission.MEDIA_CONTROL,
+            InputType.LOCK_SCREEN: Permission.LOCK_SCREEN,
+        }
+        required_permission = permission_by_type.get(event.event_type)
+        if required_permission is None or not manager.check_permission(
+            device_id, required_permission, event.session_id
+        ):
+            return InputResult(
+                success=False,
+                message="Permission denied for input type",
+                error="PERMISSION_DENIED"
+            )
 
         # Execute through callbacks
         result = None
@@ -136,8 +158,8 @@ class RemoteInputHandler:
             return InputResult(success=False, message="Permission denied", error="PERMISSION_DENIED")
 
         event = InputEvent(
-            event_type=InputType.MOUSE_MOVE,
-            data={"x": x, "y": y},
+            event_type=InputType.MOUSE_CLICK,
+            data={"x": x, "y": y, "button": button},
             timestamp=time.time(),
             source_device=device_id
         )
