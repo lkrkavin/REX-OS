@@ -5,10 +5,38 @@ set -e
 THEME_DIR="/usr/share/plymouth/themes/rex"
 mkdir -p "$THEME_DIR"
 
-# Convert the small vector logo strokes to the PNG assets Plymouth loads.
+# Convert the vector logo assets used by the theme.
 rsvg-convert -o "$THEME_DIR/r-stem.png" "$THEME_DIR/r-stem.svg"
 rsvg-convert -o "$THEME_DIR/r-bowl.png" "$THEME_DIR/r-bowl.svg"
 rsvg-convert -o "$THEME_DIR/r-leg.png" "$THEME_DIR/r-leg.svg"
+
+# Pre-render progressive SVG stroke frames. Plymouth then swaps these small
+# PNG frames to reveal each path gradually, rather than making whole strokes pop in.
+python3 - <<'PY'
+from pathlib import Path
+import subprocess
+
+theme = Path("/usr/share/plymouth/themes/rex")
+strokes = {
+    "stem": "M38 18 V218",
+    "bowl": "M38 18 H112 C165 18 184 43 184 78 C184 114 160 135 112 135 H82",
+    "leg": "M112 135 L184 218",
+}
+for name, path_data in strokes.items():
+    for frame in range(1, 13):
+        progress = frame / 12
+        offset = 100 * (1 - progress)
+        svg = f'''<svg xmlns="http://www.w3.org/2000/svg" width="220" height="240" viewBox="0 0 220 240">
+  <path d="{path_data}" pathLength="100" fill="none" stroke="#DCE9F8"
+        stroke-width="5" stroke-linecap="round" stroke-linejoin="round"
+        stroke-dasharray="100" stroke-dashoffset="{offset:.4f}"/>
+</svg>'''
+        source = theme / f".{name}-{frame:02d}.svg"
+        output = theme / f"{name}-{frame:02d}.png"
+        source.write_text(svg, encoding="utf-8")
+        subprocess.run(["rsvg-convert", "-o", str(output), str(source)], check=True)
+        source.unlink()
+PY
 
 # Select REX as the system boot splash and include it in the initramfs.
 mkdir -p /etc/plymouth
@@ -20,4 +48,4 @@ DeviceTimeout=8
 EOF
 
 update-initramfs -u -k all
-echo "[REX OS] REX Plymouth boot theme configured."
+echo "[REX OS] Progressive R drawing and delayed Hello boot theme configured."
