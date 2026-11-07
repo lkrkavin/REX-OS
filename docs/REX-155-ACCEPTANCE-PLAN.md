@@ -82,7 +82,7 @@ Update this table as work progresses. Link commits, CI runs, artifacts and VM ev
 | # | Feature | Implementation status | CI status | ISO status | Runtime status | Evidence / blockers |
 |---|---|---|---|---|---|---|
 | 1 | Continuous Hey Rex | Not started / unverified | Pending | Pending | Pending | |
-| 2 | Desktop control and permissions | Not started / unverified | Pending | Pending | Pending | |
+| 2 | Desktop control and permissions | Existing local approval broker; integration/audit verification pending | Pending | Pending | Pending | Existing module reviewed; remote mutations now fail closed until approval broker integration |
 | 3 | Android companion | Not started / unverified | Pending | Pending | Pending | |
 | 4 | Windows companion | Not started / unverified | Pending | Pending | Pending | |
 | 5 | macOS companion | Not started / unverified | Pending | Pending | Pending | |
@@ -90,7 +90,7 @@ Update this table as work progresses. Link commits, CI runs, artifacts and VM ev
 | 7 | Floating robot runtime | Not started / unverified | Pending | Pending | Pending | |
 | 8 | OpenRouter live AI | Not started / unverified | Pending | Pending | Pending | |
 | 9 | Microphone/STT/TTS | Not started / unverified | Pending | Pending | Pending | |
-| 10 | Secure remote access | Not started / unverified | Pending | Pending | Pending | |
+| 10 | Secure remote access | In progress: authenticated first-frame handshake; remote mutations fail closed | Pending | Pending | Pending | Commits d68304b and 70531a; automated security tests added in 166c3a9; TLS, expiring device-token integration and relay review pending |
 | 11 | Commercial licensing/billing/cloud | Not started / unverified | Pending | Pending | Pending | |
 | 12 | ISO + VirtualBox acceptance | Prior ISO build passed; new full acceptance pending | Prior run passed | Prior ISO uploaded | VM test pending | Prior run is not evidence for new code |
 
