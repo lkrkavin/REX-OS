@@ -1,8 +1,4 @@
-# REX OS Plymouth theme.
-# Minimal charcoal screen: draw the R in three deliberate strokes, then
-# reveal "Hello" character-by-character. Plymouth exits naturally when the
-# display manager takes over, handing off to the login/desktop screen.
-
+# REX OS Plymouth theme: hand-drawn R, pause, then handwritten-style Hello.
 Window.SetBackgroundTopColor(0.035, 0.043, 0.059);
 Window.SetBackgroundBottomColor(0.035, 0.043, 0.059);
 
@@ -11,90 +7,120 @@ screen_h = Window.GetHeight();
 center_x = screen_w / 2;
 center_y = screen_h / 2;
 
-stem_image = Image("r-stem.png");
-bowl_image = Image("r-bowl.png");
-leg_image = Image("r-leg.png");
+stem = Sprite(Image("stem-01.png"));
+bowl = Sprite(Image("bowl-01.png"));
+leg = Sprite(Image("leg-01.png"));
 
-stem = Sprite(stem_image);
-bowl = Sprite(bowl_image);
-leg = Sprite(leg_image);
+stem.SetPosition(center_x - 110, center_y - 190, 10);
+bowl.SetPosition(center_x - 110, center_y - 190, 11);
+leg.SetPosition(center_x - 110, center_y - 190, 12);
+stem.SetOpacity(1);
+bowl.SetOpacity(1);
+leg.SetOpacity(1);
 
-logo_x = center_x - stem_image.GetWidth() / 2;
-logo_y = center_y - 190;
+# Preload progressive stroke frames so each stroke is revealed, not popped in.
+s02=Image("stem-02.png"); s03=Image("stem-03.png"); s04=Image("stem-04.png");
+s05=Image("stem-05.png"); s06=Image("stem-06.png"); s07=Image("stem-07.png");
+s08=Image("stem-08.png"); s09=Image("stem-09.png"); s10=Image("stem-10.png");
+s11=Image("stem-11.png"); s12=Image("stem-12.png");
+b02=Image("bowl-02.png"); b03=Image("bowl-03.png"); b04=Image("bowl-04.png");
+b05=Image("bowl-05.png"); b06=Image("bowl-06.png"); b07=Image("bowl-07.png");
+b08=Image("bowl-08.png"); b09=Image("bowl-09.png"); b10=Image("bowl-10.png");
+b11=Image("bowl-11.png"); b12=Image("bowl-12.png");
+l02=Image("leg-02.png"); l03=Image("leg-03.png"); l04=Image("leg-04.png");
+l05=Image("leg-05.png"); l06=Image("leg-06.png"); l07=Image("leg-07.png");
+l08=Image("leg-08.png"); l09=Image("leg-09.png"); l10=Image("leg-10.png");
+l11=Image("leg-11.png"); l12=Image("leg-12.png");
 
-stem.SetPosition(logo_x, logo_y, 10);
-bowl.SetPosition(logo_x, logo_y, 11);
-leg.SetPosition(logo_x, logo_y, 12);
-stem.SetOpacity(0);
-bowl.SetOpacity(0);
-leg.SetOpacity(0);
+# Hello sits directly below the completed R. Reveal letters in a smooth,
+# quicker sequence only after the full 1.5-second pause.
+hello_h_image=Image.Text("H",0.82,0.88,0.96);
+hello_e_image=Image.Text("e",0.82,0.88,0.96);
+hello_l1_image=Image.Text("l",0.82,0.88,0.96);
+hello_l2_image=Image.Text("l",0.82,0.88,0.96);
+hello_o_image=Image.Text("o",0.82,0.88,0.96);
+hello_h=Sprite(hello_h_image); hello_e=Sprite(hello_e_image);
+hello_l1=Sprite(hello_l1_image); hello_l2=Sprite(hello_l2_image);
+hello_o=Sprite(hello_o_image);
+hello_y=center_y+82;
+hello_x=center_x-36;
+hello_h.SetPosition(hello_x,hello_y,20);
+hello_e.SetPosition(hello_x+18,hello_y,20);
+hello_l1.SetPosition(hello_x+34,hello_y,20);
+hello_l2.SetPosition(hello_x+42,hello_y,20);
+hello_o.SetPosition(hello_x+50,hello_y,20);
+hello_h.SetOpacity(0); hello_e.SetOpacity(0); hello_l1.SetOpacity(0);
+hello_l2.SetOpacity(0); hello_o.SetOpacity(0);
 
-# Keep the REX OS wordmark in the same restrained style as the supplied image.
-wordmark_image = Image.Text("REX OS", 0.78, 0.82, 0.90);
-wordmark = Sprite(wordmark_image);
-wordmark.SetPosition(center_x - wordmark_image.GetWidth() / 2, center_y + 42, 10);
+wordmark_image=Image.Text("REX OS",0.78,0.82,0.90);
+wordmark=Sprite(wordmark_image);
+wordmark.SetPosition(center_x-wordmark_image.GetWidth()/2,center_y+132,10);
 wordmark.SetOpacity(0);
 
-hello_h_image = Image.Text("H", 0.82, 0.88, 0.96);
-hello_e_image = Image.Text("e", 0.82, 0.88, 0.96);
-hello_l1_image = Image.Text("l", 0.82, 0.88, 0.96);
-hello_l2_image = Image.Text("l", 0.82, 0.88, 0.96);
-hello_o_image = Image.Text("o", 0.82, 0.88, 0.96);
-
-hello_h = Sprite(hello_h_image);
-hello_e = Sprite(hello_e_image);
-hello_l1 = Sprite(hello_l1_image);
-hello_l2 = Sprite(hello_l2_image);
-hello_o = Sprite(hello_o_image);
-
-hello_y = center_y + 112;
-hello_start_x = center_x - 36;
-hello_h.SetPosition(hello_start_x, hello_y, 20);
-hello_e.SetPosition(hello_start_x + 18, hello_y, 20);
-hello_l1.SetPosition(hello_start_x + 34, hello_y, 20);
-hello_l2.SetPosition(hello_start_x + 42, hello_y, 20);
-hello_o.SetPosition(hello_start_x + 50, hello_y, 20);
-
-hello_h.SetOpacity(0);
-hello_e.SetOpacity(0);
-hello_l1.SetOpacity(0);
-hello_l2.SetOpacity(0);
-hello_o.SetOpacity(0);
-
-# Small, quiet spinner near the lower centre.
-spinner_image = Image.Text("·", 0.38, 0.52, 0.72);
-spinner = Sprite(spinner_image);
-spinner.SetPosition(center_x - spinner_image.GetWidth() / 2, screen_h - 78, 5);
-spinner.SetOpacity(0);
-
-frame = 0;
+frame=0;
 fun refresh_callback()
 {
     frame++;
 
-    # The three R strokes are introduced one after another, like handwriting.
-    if (frame > 8)  stem.SetOpacity(1);
-    if (frame > 34) bowl.SetOpacity(1);
-    if (frame > 62) leg.SetOpacity(1);
+    # Each of the 12 frames is held for two refreshes. This creates a
+    # continuous top-to-bottom stem, curved bowl, then diagonal leg.
+    if (frame < 24) {
+        if (frame < 2) stem.SetImage(Image("stem-01.png"));
+        else if (frame < 4) stem.SetImage(s02);
+        else if (frame < 6) stem.SetImage(s03);
+        else if (frame < 8) stem.SetImage(s04);
+        else if (frame < 10) stem.SetImage(s05);
+        else if (frame < 12) stem.SetImage(s06);
+        else if (frame < 14) stem.SetImage(s07);
+        else if (frame < 16) stem.SetImage(s08);
+        else if (frame < 18) stem.SetImage(s09);
+        else if (frame < 20) stem.SetImage(s10);
+        else if (frame < 22) stem.SetImage(s11);
+        else stem.SetImage(s12);
+    }
 
-    # A brief beat, then a quicker handwritten-style Hello reveal.
-    if (frame > 88)  hello_h.SetOpacity(1);
-    if (frame > 96)  hello_e.SetOpacity(1);
-    if (frame > 104) hello_l1.SetOpacity(1);
-    if (frame > 112) hello_l2.SetOpacity(1);
-    if (frame > 120) hello_o.SetOpacity(1);
+    if (frame >= 24 && frame < 48) {
+        if (frame < 26) bowl.SetImage(Image("bowl-01.png"));
+        else if (frame < 28) bowl.SetImage(b02);
+        else if (frame < 30) bowl.SetImage(b03);
+        else if (frame < 32) bowl.SetImage(b04);
+        else if (frame < 34) bowl.SetImage(b05);
+        else if (frame < 36) bowl.SetImage(b06);
+        else if (frame < 38) bowl.SetImage(b07);
+        else if (frame < 40) bowl.SetImage(b08);
+        else if (frame < 42) bowl.SetImage(b09);
+        else if (frame < 44) bowl.SetImage(b10);
+        else if (frame < 46) bowl.SetImage(b11);
+        else bowl.SetImage(b12);
+    }
 
-    # The REX OS wordmark settles in after the greeting.
-    if (frame > 138) wordmark.SetOpacity(1);
-    if (frame > 150) spinner.SetOpacity(0.65);
+    if (frame >= 48 && frame < 72) {
+        if (frame < 50) leg.SetImage(Image("leg-01.png"));
+        else if (frame < 52) leg.SetImage(l02);
+        else if (frame < 54) leg.SetImage(l03);
+        else if (frame < 56) leg.SetImage(l04);
+        else if (frame < 58) leg.SetImage(l05);
+        else if (frame < 60) leg.SetImage(l06);
+        else if (frame < 62) leg.SetImage(l07);
+        else if (frame < 64) leg.SetImage(l08);
+        else if (frame < 66) leg.SetImage(l09);
+        else if (frame < 68) leg.SetImage(l10);
+        else if (frame < 70) leg.SetImage(l11);
+        else leg.SetImage(l12);
+    }
+
+    # 30 refreshes of silence after the R is complete (about 1-2 seconds).
+    if (frame >= 102 && frame < 106) hello_h.SetOpacity(1);
+    if (frame >= 106 && frame < 110) hello_e.SetOpacity(1);
+    if (frame >= 110 && frame < 114) hello_l1.SetOpacity(1);
+    if (frame >= 114 && frame < 118) hello_l2.SetOpacity(1);
+    if (frame >= 118) hello_o.SetOpacity(1);
+    if (frame >= 132) wordmark.SetOpacity(1);
 }
-
 Plymouth.SetRefreshFunction(refresh_callback);
 
 fun progress_callback(duration, progress)
 {
-    # Boot progress is intentionally not mapped to a fake percentage.
-    # The greeting remains visible until Plymouth hands off to the display manager.
+    # Keep the completed greeting visible until the display manager takes over.
 }
-
 Plymouth.SetBootProgressFunction(progress_callback);
