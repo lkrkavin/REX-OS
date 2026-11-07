@@ -13,6 +13,8 @@ from dataclasses import dataclass
 from typing import Optional, Callable, List
 from enum import Enum
 
+from connect.security import get_security_manager
+
 
 class InstallMethod(Enum):
     """Supported installation methods"""
@@ -49,7 +51,16 @@ class PackageManager:
     Uses policy-based permissions and status callbacks.
     """
 
-    def __init__(self, on_progress: Optional[Callable[[float, str], None]] = None):
+    def __init__(
+        self,
+        on_progress: Optional[Callable[[float, str], None]] = None,
+        security_manager=None,
+        actor_id: Optional[str] = None,
+        token_id: Optional[str] = None,
+    ):
+        self._security = security_manager or get_security_manager()
+        self._actor_id = actor_id
+        self._token_id = token_id
         self._progress_callback = on_progress
         self._sudo_password: Optional[str] = None
         # Cross-platform check for root/admin
@@ -118,15 +129,18 @@ class PackageManager:
             )
 
     async def _check_permission(self, package_id: str, action: str) -> bool:
-        """Check if action is permitted. Fails closed if authorization unavailable."""
-        # Policy: All actions require explicit user confirmation via system service
-        # Return False (fail closed) if authorization cannot be verified
-        try:
-            # In production, this would call the system authorization service
-            # For now, deny by default - requires explicit opt-in via policy
+        """Authorize package changes through the shared, fail-closed security core."""
+        if (not isinstance(package_id, str) or not package_id.strip()
+                or len(package_id) > 256 or any(ch in package_id for ch in ("\x00", "\n", "\r"))):
             return False
+        if action not in ("install", "uninstall") or not self._actor_id:
+            return False
+        try:
+            shared_action = "install_app" if action == "install" else "remove_app"
+            return bool(self._security and self._security.authorize_action(
+                self._actor_id, shared_action, package_id, token_id=self._token_id
+            ))
         except Exception:
-            # Fail closed: any error means deny
             return False
 
     async def _install_apt(self, package_id: str) -> InstallResult:
