@@ -6,7 +6,7 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration", "feat/rex156-complete-release" ]
     tags:
       - 'v*'
   pull_request:
@@ -27,6 +27,11 @@ jobs:
           npm run build --prefix vendor/jarvis-upstream
           mkdir -p build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui
           cp -a vendor/jarvis-upstream/dist/. build/config/includes.chroot/opt/rex-os/vendor/jarvis-ui/
+
+      - name: Install Python test dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-psutil
 
       - name: Python syntax and full test suite
         run: |
