@@ -168,7 +168,9 @@ class DeviceRegistry:
             del self._devices[device_id]
             self._save()
             self._notify_change(device_id, None)
-            return True
+        from .security import get_security_manager
+        get_security_manager().revoke_device_permissions(device_id)
+        return True
 
     def get_device(self, device_id: str) -> Optional[DeviceInfo]:
         with self._lock:
@@ -238,7 +240,9 @@ class DeviceRegistry:
             device.connection_status = ConnectionStatus.OFFLINE
             self._save()
             self._notify_change(device_id, device)
-            return True
+        from .security import get_security_manager
+        get_security_manager().revoke_device_permissions(device_id)
+        return True
 
     def trust_device(self, device_id: str) -> bool:
         with self._lock:
