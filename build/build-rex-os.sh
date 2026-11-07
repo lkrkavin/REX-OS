@@ -96,6 +96,9 @@ if [ -f /build/live-build.conf ]; then
     . /build/live-build.conf
 fi
 
+# live-build only executes executable hooks; Git checkout stores hook files as 0644.
+chmod +x /build/config/hooks/normal/04-configure-rex-plymouth.hook.chroot
+
 info "Starting ISO build (this may take 30-60 minutes)..."
 
 # Build the ISO with proper error handling
