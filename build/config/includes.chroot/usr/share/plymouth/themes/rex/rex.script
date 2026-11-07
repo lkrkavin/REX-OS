@@ -15,8 +15,8 @@ stem.SetPosition(center_x - 110, center_y - 190, 10);
 bowl.SetPosition(center_x - 110, center_y - 190, 11);
 leg.SetPosition(center_x - 110, center_y - 190, 12);
 stem.SetOpacity(1);
-bowl.SetOpacity(1);
-leg.SetOpacity(1);
+bowl.SetOpacity(0);
+leg.SetOpacity(0);
 
 # Preload progressive stroke frames so each stroke is revealed, not popped in.
 s02=Image("stem-02.png"); s03=Image("stem-03.png"); s04=Image("stem-04.png");
@@ -80,6 +80,7 @@ fun refresh_callback()
     }
 
     if (frame >= 24 && frame < 48) {
+        bowl.SetOpacity(1);
         if (frame < 26) bowl.SetImage(Image("bowl-01.png"));
         else if (frame < 28) bowl.SetImage(b02);
         else if (frame < 30) bowl.SetImage(b03);
@@ -95,6 +96,7 @@ fun refresh_callback()
     }
 
     if (frame >= 48 && frame < 72) {
+        leg.SetOpacity(1);
         if (frame < 50) leg.SetImage(Image("leg-01.png"));
         else if (frame < 52) leg.SetImage(l02);
         else if (frame < 54) leg.SetImage(l03);
