@@ -444,6 +444,10 @@ class RexRemoteServer:
             return False
         try:
             data = json.loads(message)
+            # JSON may be any value; only an object can carry auth fields.
+            # Reject arrays, strings, numbers and null without raising.
+            if not isinstance(data, dict):
+                return False
             supplied = data.get("token", "")
             return (
                 data.get("type") == "authenticate"
