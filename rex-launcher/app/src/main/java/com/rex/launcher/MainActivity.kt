@@ -161,7 +161,7 @@ private fun HomePage(apps: List<LaunchableApp>, loading: Boolean, onLaunch: (Str
 private fun AppsPage(apps: List<LaunchableApp>, loading: Boolean, onLaunch: (String) -> Unit) {
     var search by remember { mutableStateOf("") }
     val filtered = remember(apps, search) { apps.filter { it.label.contains(search, ignoreCase = true) } }
-    Column(Modifier.fillMaxWidth().weight(1f, fill = false)) {
+    Column(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
         Text("App drawer", color = Color.White, fontSize = 26.sp, fontWeight = FontWeight.SemiBold)
         Text("${apps.size} installed apps", color = Color(0xFF9AA8C2), fontSize = 12.sp)
         Spacer(Modifier.height(12.dp))
