@@ -196,7 +196,7 @@ private fun AssistantPage(savedKey: String, onSaveKey: (String) -> Unit) {
     var status by remember { mutableStateOf("Connect an OpenRouter API key to chat with REX.") }
     val messages = remember { mutableStateListOf<ChatMessage>() }
     val scope = rememberCoroutineScope()
-    Column(Modifier.fillMaxWidth().weight(1f, fill = false)) {
+    Column(Modifier.fillMaxWidth().heightIn(max = 560.dp)) {
         Text("REX Assistant", color = Color.White, fontSize = 25.sp, fontWeight = FontWeight.SemiBold)
         Text("Your AI companion", color = Color(0xFF9AA8C2), fontSize = 12.sp)
         Spacer(Modifier.height(10.dp))
