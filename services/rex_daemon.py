@@ -44,11 +44,6 @@ class REXDaemon:
         signal.signal(signal.SIGTERM, self._signal_handler)
         signal.signal(signal.SIGINT, self._signal_handler)
 
-    def _signal_handler(self, signum, frame):
-        """Handle shutdown signals"""
-        print(f"Received signal {signum}, shutting down...")
-        self.running = False
-
     def _load_config(self) -> Dict[str, Any]:
         """Load configuration"""
         config_file = os.path.join(self.config_path, "rex-daemon.json")

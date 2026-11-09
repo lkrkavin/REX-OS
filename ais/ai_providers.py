@@ -290,7 +290,6 @@ class AnthropicProvider(AIProvider):
                     "https://api.anthropic.com/v1/messages",
                     json=payload,
                     headers={
-                        "Authorization": f"Bearer {self.api_key}",
                         "x-api-key": self.api_key,
                         "anthropic-version": "2023-06-01"
                     }
@@ -346,7 +345,7 @@ class GoogleProvider(AIProvider):
             import aiohttp
 
             model_name = model or "gemini-pro"
-            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
+            url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent"
 
             payload = {
                 "contents": [{"role": "user", "parts": [{"text": prompt}]}],
@@ -355,7 +354,11 @@ class GoogleProvider(AIProvider):
 
             timeout = aiohttp.ClientTimeout(total=self.config.timeout)
             async with aiohttp.ClientSession(timeout=timeout) as session:
-                async with session.post(url, json=payload) as resp:
+                async with session.post(
+                    url,
+                    json=payload,
+                    headers={"Authorization": f"Bearer {self.api_key}"}
+                ) as resp:
                     if resp.status == 200:
                         data = await resp.json()
                         return data["candidates"][0]["content"]["parts"][0]["text"]

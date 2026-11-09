@@ -29,8 +29,12 @@ import uuid
 LOCALHOST = "127.0.0.1"
 WS_PORT = 8765
 HTTP_PORT = 8766
-RELAY_HOST = os.environ.get("REX_RELAY_HOST", "relay.rex-os.org")
+RELAY_HOST = os.environ.get("REX_RELAY_HOST")  # Required: set via environment
 RELAY_PORT = int(os.environ.get("REX_RELAY_PORT", 443))
+
+if not RELAY_HOST:
+    import warnings
+    warnings.warn("REX_RELAY_HOST not set. Relay mode will not work. Set via environment variable.")
 
 # Try optional imports
 try:
@@ -517,10 +521,26 @@ class RexRemoteServer:
 
             elif action_type == "open_app":
                 app = action.get("app", "")
-                if app:
-                    os.system(f"xdg-open {app} 2>/dev/null || open {app} 2>/dev/null || start {app}" if sys.platform == "win32" else f"open {app}")
+                if not app:
+                    return {"success": False, "error": "Application not specified"}
+
+                # Validate app name - only allow alphanumeric, dash, underscore, dot
+                import re
+                if not re.match(r'^[a-zA-Z0-9._-]+$', app):
+                    return {"success": False, "error": "Invalid application name"}
+
+                try:
+                    if sys.platform == "win32":
+                        subprocess.run(["start", "", app], shell=True, check=True)
+                    elif sys.platform == "darwin":
+                        subprocess.run(["open", app], check=True)
+                    else:
+                        subprocess.run(["xdg-open", app], check=True)
                     return {"success": True, "message": f"Opened: {app}"}
-                return {"success": False, "error": "Application not specified"}
+                except subprocess.CalledProcessError as e:
+                    return {"success": False, "error": f"Failed to open app: {e}"}
+                except FileNotFoundError:
+                    return {"success": False, "error": "Command not found (xdg-open/open/start)"}
 
             elif action_type == "lock":
                 if sys.platform == "win32":
@@ -646,13 +666,24 @@ class RexRemoteServer:
 
     async def run_relay(self):
         """Run server in relay mode for phone connectivity"""
+        if not RELAY_HOST:
+            print("REX_RELAY_HOST not configured, running in local mode")
+            await self.run_local()
+            return
+
         if not await self.check_relay_connection():
             print("Relay server not available, running in local mode")
             await self.run_local()
             return
 
+        session_token = os.environ.get("REX_SESSION_TOKEN")
+        if not session_token:
+            print("REX_SESSION_TOKEN not set, running in local mode")
+            await self.run_local()
+            return
+
         print(f"Connecting to relay at {RELAY_HOST}:{RELAY_PORT}")
-        if await self.connect_to_relay("session-token-placeholder"):
+        if await self.connect_to_relay(session_token):
             print("Connected to relay, accepting phone connections")
         else:
             print("Failed to connect to relay, falling back to local mode")

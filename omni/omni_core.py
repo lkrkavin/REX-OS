@@ -253,7 +253,7 @@ class OMNICore:
         cmd_lower = command.lower()
         if any(w in cmd_lower for w in ["install", "add", "download", "get"]):
             return "install"
-        if any(w in cmd_lower for w in ["uninstall", "remove", "delete", "delete"]):
+        if any(w in cmd_lower for w in ["uninstall", "remove", "delete"]):
             return "uninstall"
         if any(w in cmd_lower for w in ["launch", "start", "open", "run"]):
             return "launch"

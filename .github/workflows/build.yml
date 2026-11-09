@@ -49,6 +49,15 @@ jobs:
             python3-bs4 \
             debian-archive-keyring
 
+      - name: Install Python test dependencies
+        run: |
+          pip3 install pytest pytest-asyncio
+
+      - name: Run Python tests
+        run: |
+          cd "$GITHUB_WORKSPACE"
+          python3 -m pytest tests/ -v
+
       - name: Prepare build environment
         run: |
           mkdir -p build/output

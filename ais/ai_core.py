@@ -169,7 +169,7 @@ class REXAICore:
         return ProviderStatus(
             provider_type=self._provider_type or ProviderType.NONE,
             available=self._provider_available,
-            last_error=self._provider._last_error if self._provider else None
+            last_error=self._provider.last_error if self._provider else None
         )
 
     async def initialize(self) -> bool:

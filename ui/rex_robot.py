@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Optional
 
 # Ensure we can import from our modules
-sys.path.insert(0, '/opt/rex-os')
+sys.path.insert(0, os.environ.get("REX_OS_PATH", "/opt/rex-os"))
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)) + '/..')
 
 try:
