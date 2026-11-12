@@ -6,11 +6,11 @@ concurrency:
 
 on:
   push:
-    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration", "feat/rex156-complete-release" ]
+    branches: [ "main", "master", "fix/iso-build", "feat/rex144-secure-device-foundation", "feat/rex145-jarvis-openrouter-integration", "feat/rex155-commercial-integration", "feat/rex156-complete-release", "fix/rex156-python-dependency-hook" ]
     tags:
       - 'v*'
   pull_request:
-    branches: [ "main", "master" ]
+    branches: [ "main", "master", "feat/rex156-complete-release" ]
   workflow_dispatch:
 
 jobs:
