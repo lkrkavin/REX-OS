@@ -1,13 +1,51 @@
-﻿#!/bin/sh
-# Install Python packages not available in Debian repositories
-set -e
+#!/bin/sh
+# Install Python packages and system libraries required by REX voice/desktop features.
+# This hook runs inside the Debian live-build chroot.
+set -eu
+
+echo "[REX OS] Installing system dependencies..."
+export DEBIAN_FRONTEND=noninteractive
+apt-get update
+apt-get install -y --no-install-recommends \
+    python3-pip \
+    python3-speechrecognition \
+    python3-pyaudio \
+    python3-pocketsphinx \
+    python3-tk \
+    python3-xlib \
+    espeak-ng
 
 echo "[REX OS] Installing Python dependencies from PyPI..."
+# The PyPI distribution is named "mss" (not "python-mss").
+# Keep stderr visible and fail the image build if installation fails; a bootable
+# ISO with missing runtime packages is not a valid release artifact.
+python3 -m pip install \
+    --no-cache-dir \
+    --prefer-binary \
+    --break-system-packages \
+    pyttsx3 PyAutoGUI mss transliterate indic-transliteration
 
-PYPI_PACKAGES="pyttsx3 SpeechRecognition PyAutoGUI python-mss transliterate indic-transliteration"
+echo "[REX OS] Verifying required Python modules..."
+python3 - <<'PY'
+import importlib.util
+import sys
 
-apt-get update -qq
-apt-get install -y python3-pip -qq
-pip3 install --no-cache-dir --break-system-packages $PYPI_PACKAGES 2>/dev/null || echo "[REX OS] Some PyPI packages may have failed."
+required_modules = (
+    "speech_recognition",
+    "pyaudio",
+    "pocketsphinx",
+    "pyttsx3",
+    "pyautogui",
+    "mss",
+    "transliterate",
+    "indic_transliteration",
+)
+missing = [name for name in required_modules if importlib.util.find_spec(name) is None]
+if missing:
+    print("[REX OS] Missing required Python modules: " + ", ".join(missing), file=sys.stderr)
+    sys.exit(1)
 
-echo "[REX OS] Python dependencies installation complete."
+print("[REX OS] Verified modules: " + ", ".join(required_modules))
+PY
+
+echo "[REX OS] Python dependencies installed and verified."
