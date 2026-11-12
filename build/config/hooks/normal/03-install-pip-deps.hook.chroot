@@ -16,7 +16,7 @@ apt-get install -y --no-install-recommends \
     espeak-ng
 
 echo "[REX OS] Installing Python dependencies from PyPI..."
-# The PyPI distribution is named "mss" (not "python-mss").
+# Install the mss distribution from PyPI.
 # Keep stderr visible and fail the image build if installation fails; a bootable
 # ISO with missing runtime packages is not a valid release artifact.
 python3 -m pip install \
